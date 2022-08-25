@@ -1,7 +1,6 @@
-use std::io;
-use rand::Rng;
+pub mod physics;
+
+use crate::physics::shooting;
 
 fn main() {
-    let secret_number = rand::thread_rng().gen_range(1..=100);
-    println!("{}", secret_number);
 }
