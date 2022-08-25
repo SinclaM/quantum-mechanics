@@ -12,27 +12,20 @@ fn main() {
     const PSI_CUTOFF: f64 = 300.0;
     const ENERGY_STEP_CUTOFF: f64 = 0.0001;
 
-    let mut solver = ShootingSolverEven::new(N, DX, INITIAL_ENERGY, DE, PSI_CUTOFF, box_potential, ENERGY_STEP_CUTOFF);
+    let mut solver = ShootingSolverEven::new(N, DX, INITIAL_ENERGY, DE, PSI_CUTOFF, physics::box_potential, ENERGY_STEP_CUTOFF);
     solver.solve();
 
     let mut file = File::create("data/square_well_shooting_method.txt").unwrap();
     
     let mut x: f64 = - (N as f64) * DX;
-    for ele in solver.wavefunction.iter().rev() {
-        write!(file, "{} {}\n", x, ele).unwrap();
+    for val in solver.wavefunction.iter().rev() {
+        write!(file, "{} {}\n", x, val).unwrap();
         x += DX;
     }
-    for ele in solver.wavefunction {
-        write!(file, "{} {}\n", x, ele).unwrap();
+    for val in solver.wavefunction {
+        write!(file, "{} {}\n", x, val).unwrap();
         x += DX;
     }
 
 }
 
-fn box_potential(x: f64) -> f64 {
-    if x.abs() < 1.0 {
-        0.0
-    } else {
-        100000.0
-    }
-}
