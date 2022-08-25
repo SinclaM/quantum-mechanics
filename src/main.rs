@@ -1,7 +1,6 @@
 pub mod physics;
 
 use crate::physics::shooting::ShootingSolverEven;
-use f64;
 use std::fs::File;
 use std::io::Write;
 
