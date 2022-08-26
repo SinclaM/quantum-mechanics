@@ -1,1 +1,0 @@
-plot 'data/square_well_shooting_method.txt' using 1:2

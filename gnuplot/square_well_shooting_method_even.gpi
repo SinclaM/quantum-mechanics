@@ -1,0 +1,5 @@
+set yrange[-1:1]
+set terminal png
+set output 'img/square_well_shooting_method_even.png'
+
+plot 'data/square_well_shooting_method_even.txt' using 1:2

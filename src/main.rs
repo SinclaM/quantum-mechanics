@@ -1,31 +1,39 @@
 pub mod physics;
 
 use crate::physics::shooting::ShootingSolverEven;
-use std::fs::File;
+use std::fs;
 use std::io::Write;
+use std::process::Command;
 
 fn main() {
-    const N: usize = 10000;
-    const DX: f64 = 1.0 / (N as f64);
-    const INITIAL_ENERGY: f64 = 2.0;
-    const DE: f64 = 10.0;
-    const PSI_CUTOFF: f64 = 300.0;
-    const ENERGY_STEP_CUTOFF: f64 = 0.0001;
-
-    let mut solver = ShootingSolverEven::new(N, DX, INITIAL_ENERGY, DE, PSI_CUTOFF, physics::box_potential, ENERGY_STEP_CUTOFF);
+    // Solve the time-independent schrodinger equation using the shooting method for
+    // even parity wavefunctions.
+    let mut solver = ShootingSolverEven::default(
+        10000,
+        1.1 * physics::L / 10000.0,
+        0.0,
+        physics::box_potential,
+    );
     solver.solve();
 
-    let mut file = File::create("data/square_well_shooting_method.txt").unwrap();
-    
-    let mut x: f64 = - (N as f64) * DX;
+    // Write the output to a data file
+    let mut data_file = fs::File::create("data/square_well_shooting_method_even.txt")
+        .expect("Failed to create data file");
+
+    let mut x: f64 = -(solver.steps as f64) * solver.step_size;
     for val in solver.wavefunction.iter().rev() {
-        write!(file, "{} {}\n", x, val).unwrap();
-        x += DX;
+        write!(data_file, "{} {}\n", x, val).expect("Failed to write to data file");
+        x += solver.step_size;
     }
     for val in solver.wavefunction {
-        write!(file, "{} {}\n", x, val).unwrap();
-        x += DX;
+        write!(data_file, "{} {}\n", x, val).expect("Failed to write to data file");
+        x += solver.step_size;
     }
 
+    // Plot the data using gnuplot.
+    fs::create_dir_all("img").unwrap();
+    Command::new("gnuplot")
+        .arg("gnuplot/square_well_shooting_method_even.gpi")
+        .output()
+        .expect("Failed to run gnuplot");
 }
-

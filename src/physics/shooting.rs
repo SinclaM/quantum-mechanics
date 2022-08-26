@@ -1,13 +1,13 @@
 pub struct ShootingSolverEven {
-    steps: usize,
-    step_size: f64,
+    pub steps: usize,
+    pub step_size: f64,
     pub energy: f64,
-    energy_step_size: f64,
-    wavefunction_cutoff: f64,
+    pub energy_step_size: f64,
+    pub wavefunction_cutoff: f64,
     pub wavefunction: Vec<f64>,
     last_diverge: f64,
-    potential: fn(f64) -> f64,
-    energy_step_size_cutoff: f64,
+    pub potential: fn(f64) -> f64,
+    pub energy_step_size_cutoff: f64,
 }
 
 impl ShootingSolverEven {
@@ -35,18 +35,37 @@ impl ShootingSolverEven {
         }
     }
 
+    pub fn default(
+        steps: usize,
+        step_size: f64,
+        energy: f64,
+        potential: fn(f64) -> f64,
+    ) -> ShootingSolverEven {
+        let wavefunction: Vec<f64> = Vec::with_capacity(10000);
+
+        ShootingSolverEven {
+            steps,
+            step_size,
+            energy,
+            energy_step_size: 10.0,
+            wavefunction_cutoff: 300.0,
+            wavefunction,
+            last_diverge: 0.0,
+            potential,
+            energy_step_size_cutoff: 0.000001,
+        }
+    }
+
     fn step(&mut self) {
-        let potential = self.potential; // FIXME
         let i = self.wavefunction.len() - 1;
         self.wavefunction.push(
             2.0 * self.wavefunction[i]
                 - self.wavefunction[i - 1]
                 - 2.0
-                    * (self.energy - potential((i as f64) * self.step_size))
+                    * (self.energy - (self.potential)((i as f64) * self.step_size))
                     * (self.step_size * self.step_size)
                     * self.wavefunction[i],
         );
-        
     }
 
     fn is_diverging(&self) -> bool {
