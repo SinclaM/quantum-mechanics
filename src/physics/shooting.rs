@@ -1,8 +1,12 @@
 //! Shooting method for solving the time-independent Schrodinger equation
-//! in one dimension.
+//! in one dimension. The shooting method is only applicable for even
+//! potentials (symmetric about x = 0).
+
+use std::io::Write;
 
 /// A solver that looks for even parity solutions using the shooting
 /// method.
+
 pub struct ShootingSolverEven {
     pub steps: usize,
     pub step_size: f64,
@@ -126,5 +130,25 @@ impl ShootingSolverEven {
                 -1.0
             };
         }
+    }
+
+    /// Prints energy and wavefunction data to a text file. Useful for later analysis
+    /// with tools like gnuplot. The first line is the a `#` (gnuplot comment) followed
+    /// by the energy value (e.g "# 1.24345678"). The rest of the lines in the file
+    /// are the x-value and then the wavefunction value (separated by a space).
+    pub fn dump_to_file(&mut self, data_file: &mut std::fs::File) -> Result<(), std::io::Error> {
+        writeln!(data_file, "# {}", self.energy)?;
+
+        let mut x: f64 = -(self.steps as f64) * self.step_size;
+        for val in self.wavefunction.iter().rev() {
+            writeln!(data_file, "{} {}", x, val)?;
+            x += self.step_size;
+        }
+        for val in &self.wavefunction {
+            writeln!(data_file, "{} {}", x, val)?;
+            x += self.step_size;
+        }
+
+        Ok(())
     }
 }
