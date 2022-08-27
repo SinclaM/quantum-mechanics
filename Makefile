@@ -10,4 +10,4 @@ clean:
 	$(RM) data/*.txt img/*.png
 	$(RM) -r target
 
-
+.PHONY : runall buildall clean
