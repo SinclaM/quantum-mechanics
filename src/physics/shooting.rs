@@ -91,7 +91,7 @@ impl ShootingSolverEven {
     /// computed the requested number of steps, or if the wavefunction begins
     /// diverging.
     fn compute_wavefunction(&mut self) {
-        for _ in 2..self.steps {
+        for _ in 2..=self.steps {
             if self.is_diverging() {
                 break;
             }
