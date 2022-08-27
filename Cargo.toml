@@ -10,10 +10,10 @@ crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "square_well_shooting_method_even"
-path = "src/bin/square_well_shooting_method_even.rs"
+path = "src/examples/square_well_shooting_method_even.rs"
 
 [[bin]]
 name = "square_well_shooting_method_odd"
-path = "src/bin/square_well_shooting_method_odd.rs"
+path = "src/examples/square_well_shooting_method_odd.rs"
 
 [dependencies]
