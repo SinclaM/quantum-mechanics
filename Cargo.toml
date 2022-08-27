@@ -7,13 +7,11 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-
-[[bin]]
+[[example]]
 name = "square_well_shooting_method_even"
 path = "src/examples/square_well_shooting_method_even.rs"
 
-[[bin]]
+[[example]]
 name = "square_well_shooting_method_odd"
 path = "src/examples/square_well_shooting_method_odd.rs"
 
-[dependencies]
