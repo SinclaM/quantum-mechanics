@@ -15,3 +15,6 @@ path = "src/examples/square_well_shooting_method_even.rs"
 name = "square_well_shooting_method_odd"
 path = "src/examples/square_well_shooting_method_odd.rs"
 
+[[example]]
+name = "harmonic_oscillator_shooting_method"
+path = "src/examples/harmonic_oscillator_shooting_method.rs"

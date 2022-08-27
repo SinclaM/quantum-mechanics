@@ -1,0 +1,10 @@
+set terminal png
+set title "Harmonic oscillator wavefunction using the shooting method"
+set yrange[-1:1]
+
+DATAFILE="data/harmonic_oscillator_shooting_method.txt"
+set output 'img/harmonic_oscillator_shooting_method.png'
+ENERGY=system("head -n 1 ".DATAFILE." | tr -d '# ' | xargs printf '%.3f'")
+
+plot DATAFILE using 1:2 title "E = ".ENERGY
+
