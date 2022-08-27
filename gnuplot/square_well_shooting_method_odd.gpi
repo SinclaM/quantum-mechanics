@@ -1,0 +1,10 @@
+set yrange[-1.25:1.25]
+set terminal png
+set title "Particle-in-a-box wavefunction using the shooting method"
+
+
+DATAFILE="data/square_well_shooting_method_odd.txt"
+set output 'img/square_well_shooting_method_odd.png'
+ENERGY=system("head -n 1 ".DATAFILE." | tr -d '# ' | xargs printf '%.3f'")
+
+plot DATAFILE using 1:2 title "E = ".ENERGY

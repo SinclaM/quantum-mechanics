@@ -1,8 +1,19 @@
 [package]
-name = "quantum"
+name = "quantum-mechanics"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
+[[bin]]
+name = "square_well_shooting_method_even"
+path = "src/bin/square_well_shooting_method_even.rs"
+
+[[bin]]
+name = "square_well_shooting_method_odd"
+path = "src/bin/square_well_shooting_method_odd.rs"
 
 [dependencies]

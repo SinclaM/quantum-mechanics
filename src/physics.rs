@@ -9,3 +9,7 @@ pub fn box_potential(x: f64) -> f64 {
         100000.0
     }
 }
+
+pub fn harmonic_potential(x: f64) -> f64 {
+    0.5 * x * x
+}

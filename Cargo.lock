@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "quantum"
+name = "quantum-mechanics"
 version = "0.1.0"

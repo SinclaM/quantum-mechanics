@@ -7,7 +7,7 @@ use std::io::Write;
 /// A solver that looks for even parity solutions using the shooting
 /// method.
 
-pub struct ShootingSolverEven {
+pub struct ShootingSolver {
     pub steps: usize,
     pub step_size: f64,
     pub energy: f64,
@@ -17,9 +17,10 @@ pub struct ShootingSolverEven {
     last_diverge: f64,
     pub potential: fn(f64) -> f64,
     pub energy_step_size_cutoff: f64,
+    pub parity: Parity,
 }
 
-impl ShootingSolverEven {
+impl ShootingSolver {
     /// Returns a new solver for even parity wavefunctions.
     pub fn new(
         steps: usize,
@@ -29,10 +30,11 @@ impl ShootingSolverEven {
         wavefunction_cutoff: f64,
         potential: fn(f64) -> f64,
         energy_step_size_cutoff: f64,
-    ) -> ShootingSolverEven {
+        parity: Parity,
+    ) -> ShootingSolver {
         let wavefunction: Vec<f64> = Vec::with_capacity(steps);
 
-        ShootingSolverEven {
+        ShootingSolver {
             steps,
             step_size,
             energy,
@@ -42,6 +44,7 @@ impl ShootingSolverEven {
             last_diverge: 0.0,
             potential,
             energy_step_size_cutoff,
+            parity,
         }
     }
 
@@ -52,19 +55,21 @@ impl ShootingSolverEven {
         step_size: f64,
         energy: f64,
         potential: fn(f64) -> f64,
-    ) -> ShootingSolverEven {
+        parity: Parity,
+    ) -> ShootingSolver {
         let wavefunction: Vec<f64> = Vec::with_capacity(10000);
 
-        ShootingSolverEven {
+        ShootingSolver {
             steps,
             step_size,
             energy,
-            energy_step_size: 10.0,
-            wavefunction_cutoff: 300.0,
+            energy_step_size: 0.1,
+            wavefunction_cutoff: 100.0,
             wavefunction,
             last_diverge: 0.0,
             potential,
             energy_step_size_cutoff: 0.000001,
+            parity,
         }
     }
 
@@ -91,6 +96,7 @@ impl ShootingSolverEven {
     /// computed the requested number of steps, or if the wavefunction begins
     /// diverging.
     fn compute_wavefunction(&mut self) {
+        self.reset_wavefunction();
         for _ in 2..=self.steps {
             if self.is_diverging() {
                 break;
@@ -103,8 +109,16 @@ impl ShootingSolverEven {
     /// set to 1.0, which is appopriate for non-normalized even parity wavefunctions.
     fn reset_wavefunction(&mut self) {
         self.wavefunction.clear();
-        self.wavefunction.push(1.0);
-        self.wavefunction.push(1.0);
+        match self.parity {
+            Parity::Even => {
+                self.wavefunction.push(1.0);
+                self.wavefunction.push(1.0);
+            }
+            Parity::Odd => {
+                self.wavefunction.push(0.0);
+                self.wavefunction.push(self.step_size);
+            }
+        }
     }
 
     /// Popuplates the wavefunction vector with a solution to the Schrodinger equation
@@ -113,7 +127,6 @@ impl ShootingSolverEven {
     /// sufficiently small.
     pub fn solve(&mut self) {
         loop {
-            self.reset_wavefunction();
             self.compute_wavefunction();
             if self.energy_step_size.abs() <= self.energy_step_size_cutoff {
                 break;
@@ -139,9 +152,17 @@ impl ShootingSolverEven {
     pub fn dump_to_file(&mut self, data_file: &mut std::fs::File) -> Result<(), std::io::Error> {
         writeln!(data_file, "# {}", self.energy)?;
 
-        let mut x: f64 = -(self.steps as f64) * self.step_size;
-        for val in self.wavefunction.iter().rev() {
-            writeln!(data_file, "{} {}", x, val)?;
+        let mut x: f64 = -(self.wavefunction.len() as f64) * self.step_size;
+        for val in self.wavefunction.iter().skip(1).rev() {
+            writeln!(
+                data_file,
+                "{} {}",
+                x,
+                match self.parity {
+                    Parity::Even => *val,
+                    Parity::Odd =>  -val,
+                }
+            )?;
             x += self.step_size;
         }
         for val in &self.wavefunction {
@@ -151,4 +172,11 @@ impl ShootingSolverEven {
 
         Ok(())
     }
+}
+
+/// The parity of solutions that a solver will look for when solving
+/// the Schrodinger equation.
+pub enum Parity {
+    Even,
+    Odd,
 }
