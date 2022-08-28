@@ -1,5 +1,5 @@
 runall:
-	for example in `ls src/examples/*.rs`; do cargo run --example `basename $$example .rs`; done
+	for example in `ls examples/*.rs`; do cargo run --example `basename $$example .rs`; done
 
 buildall:
 	cargo build

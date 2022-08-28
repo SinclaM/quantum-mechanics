@@ -9,12 +9,15 @@ crate-type = ["cdylib", "rlib"]
 
 [[example]]
 name = "square_well_shooting_method_even"
-path = "src/examples/square_well_shooting_method_even.rs"
+path = "examples/square_well_shooting_method_even.rs"
 
 [[example]]
 name = "square_well_shooting_method_odd"
-path = "src/examples/square_well_shooting_method_odd.rs"
+path = "examples/square_well_shooting_method_odd.rs"
 
 [[example]]
 name = "harmonic_oscillator_shooting_method"
-path = "src/examples/harmonic_oscillator_shooting_method.rs"
+path = "examples/harmonic_oscillator_shooting_method.rs"
+
+[dev-dependencies]
+plotters = "0.3.3"
