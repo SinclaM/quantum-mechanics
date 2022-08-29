@@ -152,25 +152,34 @@ impl ShootingSolver {
     pub fn dump_to_file(&mut self, data_file: &mut std::fs::File) -> Result<(), std::io::Error> {
         writeln!(data_file, "# {}", self.energy)?;
 
-        let mut x: f64 = -(self.wavefunction.len() as f64) * self.step_size;
-        for val in self.wavefunction.iter().skip(1).rev() {
-            writeln!(
-                data_file,
-                "{} {}",
-                x,
-                match self.parity {
-                    Parity::Even => *val,
-                    Parity::Odd =>  -val,
-                }
-            )?;
-            x += self.step_size;
-        }
-        for val in &self.wavefunction {
-            writeln!(data_file, "{} {}", x, val)?;
-            x += self.step_size;
+        for (x, psi) in self.wavefunction_points().iter() {
+            writeln!(data_file, "{} {}", x, psi)?;
         }
 
         Ok(())
+    }
+
+    pub fn wavefunction_points(&self) -> Vec<(f64, f64)> {
+        let mut x_vals: Vec<f64> = Vec::new();
+        let mut psi_vals: Vec<f64> = Vec::new();
+        let mut pairs: Vec<(f64, f64)> = Vec::new();
+
+        x_vals.push(-(self.wavefunction.len() as f64) * self.step_size);
+
+        for val in self.wavefunction.iter().skip(1).rev() {
+            x_vals.push(x_vals.last().unwrap() + self.step_size);
+            psi_vals.push(match self.parity {
+                Parity::Even => *val,
+                Parity::Odd => -val,
+            });
+            pairs.push((*x_vals.last().unwrap(), *psi_vals.last().unwrap()));
+        }
+        for val in &self.wavefunction {
+            x_vals.push(x_vals.last().unwrap() + self.step_size);
+            psi_vals.push(*val);
+            pairs.push((*x_vals.last().unwrap(), *psi_vals.last().unwrap()));
+        }
+        pairs
     }
 }
 
