@@ -30,17 +30,23 @@ fn main() {
 
     ctx.configure_mesh().draw().unwrap();
 
-    ctx.draw_series(
-        solver
-            .wavefunction_points()
-            .iter()
-            .map(|point| TriangleMarker::new(*point, 5, &BLUE)),
-    )
+    ctx.draw_series(solver.wavefunction_points().iter().map(|point| {
+        Circle::new(
+            *point,
+            2,
+            plotters::style::ShapeStyle {
+                color: BLUE.mix(1.0),
+                filled: true,
+                stroke_width: 1,
+            },
+        )
+    }))
     .unwrap()
-    .label(format!("E = {}", solver.energy))
+    .label(format!("E = {:.3}", solver.energy))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     ctx.configure_series_labels()
+        .label_font(("sans-serif", 20))
         .background_style(&WHITE.mix(0.8))
         .border_style(&BLACK)
         .draw()
