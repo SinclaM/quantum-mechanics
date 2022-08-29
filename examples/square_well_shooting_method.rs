@@ -6,15 +6,19 @@ use std::fs;
 use plotters::prelude::*;
 
 fn main() {
-    // Solve the time-independent schrodinger equation using the shooting method for
-    // odd parity wavefunctions.
-    let mut solver =
+    // Solve the time-independent schrodinger equation using the shooting method.
+    let mut even_solver =
+        ShootingSolver::default(10000, L * 1.15 / 10000.0, 0.0, box_potential, Parity::Even);
+    even_solver.solve();
+
+    let mut odd_solver =
         ShootingSolver::default(10000, L * 1.15 / 10000.0, 0.0, box_potential, Parity::Odd);
-    solver.solve();
+    odd_solver.solve();
 
     // Write the output to a data file
     fs::create_dir_all("img").expect("Failed to create image directory");
-    let root_area = BitMapBackend::new("img/square_well_shooting_method_odd.png", (1280, 720))
+
+    let root_area = BitMapBackend::new("img/square_well_shooting_method.png", (1280, 720))
         .into_drawing_area();
     root_area.fill(&WHITE).unwrap();
 
@@ -25,12 +29,12 @@ fn main() {
             "Particle-in-a-box wavefunction using the shooting method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(-1.0..1.0, -0.4..0.4)
+        .build_cartesian_2d(-1.0..1.0, -0.2..1.2)
         .unwrap();
 
     ctx.configure_mesh().draw().unwrap();
 
-    ctx.draw_series(solver.wavefunction_points().iter().map(|point| {
+    ctx.draw_series(even_solver.wavefunction_points().iter().map(|point| {
         Circle::new(
             *point,
             2,
@@ -42,8 +46,23 @@ fn main() {
         )
     }))
     .unwrap()
-    .label(format!("E = {:.3}", solver.energy))
+    .label(format!("E = {:.3}", even_solver.energy))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+
+    ctx.draw_series(odd_solver.wavefunction_points().iter().map(|point| {
+        Circle::new(
+            *point,
+            2,
+            plotters::style::ShapeStyle {
+                color: RED.mix(1.0),
+                filled: true,
+                stroke_width: 1,
+            },
+        )
+    }))
+    .unwrap()
+    .label(format!("E = {:.3}", odd_solver.energy))
+    .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
 
     ctx.configure_series_labels()
         .label_font(("sans-serif", 20))
