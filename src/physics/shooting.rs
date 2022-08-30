@@ -159,6 +159,7 @@ impl ShootingSolver {
         Ok(())
     }
 
+    /// Returns a vector of (x, ψ) points for the wavefunction.
     pub fn wavefunction_points(&self) -> Vec<(f64, f64)> {
         let mut x_vals: Vec<f64> = Vec::new();
         let mut psi_vals: Vec<f64> = Vec::new();
