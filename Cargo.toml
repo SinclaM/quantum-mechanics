@@ -8,12 +8,8 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [[example]]
-name = "square_well_shooting_method_even"
-path = "examples/square_well_shooting_method_even.rs"
-
-[[example]]
-name = "square_well_shooting_method_odd"
-path = "examples/square_well_shooting_method_odd.rs"
+name = "square_well_shooting_method"
+path = "examples/square_well_shooting_method.rs"
 
 [[example]]
 name = "harmonic_oscillator_shooting_method"

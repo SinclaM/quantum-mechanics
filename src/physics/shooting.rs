@@ -4,8 +4,8 @@
 
 use std::io::Write;
 
-/// A solver that looks for even parity solutions using the shooting
-/// method.
+/// A solver that looks for solutions of the desired parity
+/// using the shooting method.
 
 pub struct ShootingSolver {
     pub steps: usize,
