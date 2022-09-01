@@ -3,10 +3,10 @@ use std::fmt;
 /// A constant size vector which grows inward, from both left
 /// and right. 
 pub struct InwardVec<T> {
-    data: Vec<T>,
-    left: usize,
-    right: usize,
-    meetup_idx: usize,
+    pub data: Vec<T>,
+    pub left: usize,
+    pub right: usize,
+    final_left_idx: usize,
 }
 
 impl<T: Default + Clone> InwardVec<T> {
@@ -21,7 +21,7 @@ impl<T: Default + Clone> InwardVec<T> {
                 data: vec![Default::default(); size],
                 left: 0,
                 right: size - 1,
-                meetup_idx: final_left_idx,
+                final_left_idx,
             })
         }
     }
@@ -31,10 +31,11 @@ impl<T: Default + Clone> InwardVec<T> {
     pub fn push_from_left(&mut self, val: T) -> Result<(), InwardVecError> {
         if self.left > self.right {
             Err(InwardVecError { message: String::from("Unable to push. Vector is full.") })
-        } else if self.left > self.meetup_idx {
+        } else if self.left > self.final_left_idx {
             Err(InwardVecError { message: String::from("Unable to push. No more rightward space.") })
         } else {
-            self.data[self.left] = val; self.left += 1;
+            self.data[self.left] = val; 
+            self.left += 1;
             Ok(())
         }
     }
@@ -44,7 +45,7 @@ impl<T: Default + Clone> InwardVec<T> {
     pub fn push_from_right(&mut self, val: T) -> Result<(), InwardVecError> {
         if self.left > self.right {
             Err(InwardVecError { message: String::from("Unable to push. Vector is full.") })
-        } else if self.right < self.meetup_idx {
+        } else if self.right <= self.final_left_idx {
             Err(InwardVecError { message: String::from("Unable to push. No more leftward space.") })
         } else {
             self.data[self.right] = val;
@@ -52,17 +53,6 @@ impl<T: Default + Clone> InwardVec<T> {
             Ok(())
         }
     }
-
-    /// Returns a reference to the internal vector 
-    pub fn vec(&self) -> &Vec<T> {
-        &self.data
-    }
-
-    /// Returns a mutable reference to the internal vector 
-    pub fn vec_mut(&mut self) -> &mut Vec<T> {
-        &mut self.data
-    }
-
 }
 
 
@@ -83,7 +73,7 @@ mod tests {
     #[test]
     fn create() {
         let v: InwardVec<i32> = InwardVec::new(5, 2).unwrap();
-        assert_eq!(v.vec(), &vec![0_i32; 5]);
+        assert_eq!(v.data, vec![0_i32; 5]);
 
         assert!(InwardVec::<f64>::new(0, 1).is_err());
     }
@@ -93,22 +83,22 @@ mod tests {
         let mut v = InwardVec::<f64>::new(5, 2).unwrap();
 
         assert!(v.push_from_left(1.0).is_ok());
-        assert_eq!(v.vec(), &vec![1.0, 0.0, 0.0, 0.0, 0.0]);
+        assert_eq!(v.data, vec![1.0, 0.0, 0.0, 0.0, 0.0]);
 
         assert!(v.push_from_left(2.0).is_ok());
-        assert_eq!(v.vec(), &vec![1.0, 2.0, 0.0, 0.0, 0.0]);
+        assert_eq!(v.data, vec![1.0, 2.0, 0.0, 0.0, 0.0]);
 
         assert!(v.push_from_right(5.0).is_ok());
-        assert_eq!(v.vec(), &vec![1.0, 2.0, 0.0, 0.0, 5.0]);
+        assert_eq!(v.data, vec![1.0, 2.0, 0.0, 0.0, 5.0]);
 
         assert!(v.push_from_left(3.0).is_ok());
-        assert_eq!(v.vec(), &vec![1.0, 2.0, 3.0, 0.0, 5.0]);
+        assert_eq!(v.data, vec![1.0, 2.0, 3.0, 0.0, 5.0]);
 
         // No pushing past meetup point
         assert!(v.push_from_left(4.0).is_err());
 
         assert!(v.push_from_right(4.0).is_ok());
-        assert_eq!(v.vec(), &vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        assert_eq!(v.data, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
 
         assert!(v.push_from_right(6.0).is_err());
     }
@@ -127,7 +117,6 @@ mod tests {
     fn push_from_right() {
         let mut v = InwardVec::<i32>::new(4, 2).unwrap();
 
-        assert!(v.push_from_right(1).is_ok());
         assert!(v.push_from_right(1).is_ok());
         assert!(v.push_from_right(1).is_err());
     }

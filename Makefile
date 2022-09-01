@@ -1,11 +1,14 @@
-runall: buildall
+runall: test
 	for example in `ls examples/*.rs`; do cargo run --example `basename $$example .rs`; done
 
-buildall:
+buildall: test
 	cargo build
 
+test:
+	cargo test
+
 clean:
-	$(RM) data/*.txt img/*.png
+	$(RM) img/*.png
 	$(RM) -r target
 
 .PHONY : runall buildall clean
