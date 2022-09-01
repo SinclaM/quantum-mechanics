@@ -42,7 +42,7 @@ fn main() {
             "Wavefunction in a Lennard-Jones potential using the matching method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(solver.x_min..solver.x_max, -0.0..2e13_f64)
+        .build_cartesian_2d(solver.x_min..solver.x_max, 0.0..2.0)
         .unwrap();
 
     ctx.configure_mesh().draw().unwrap();

@@ -1,7 +1,8 @@
 //! Matching method for solving the time-independent Schrodinger equation
 //! in one dimension.
 
-use crate::utils::{InwardVec, InwardVecError};
+use crate::utils::inward_vec::{InwardVec, InwardVecError};
+use crate::utils::integration::trapezoidal;
 use std::io::Write;
 
 /// A solver that looks for solutions using the matching method.
@@ -142,6 +143,7 @@ impl MatchingSolver {
         loop {
             self.compute_wavefunction();
             if self.energy_step_size.abs() <= self.energy_step_size_cutoff {
+                self.normalize();
                 break;
             }
 
@@ -193,5 +195,12 @@ impl MatchingSolver {
         }
 
         pairs
+    }
+
+    fn normalize(&mut self) {
+        let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
+        f = f.iter().map(|val| val * val).collect();
+        let integral = trapezoidal(&f, &self.step_size);
+        self.wavefunction.data.iter_mut().for_each(|val| *val = *val * (1.0 / integral).sqrt());
     }
 }

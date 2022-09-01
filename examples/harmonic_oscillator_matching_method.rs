@@ -42,7 +42,7 @@ fn main() {
             "Harmonic oscillator wavefunction using the matching method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(solver.x_min..solver.x_max, -0.1_f64..0.1_f64)
+        .build_cartesian_2d(solver.x_min..solver.x_max, -1.0..1.0)
         .unwrap();
 
     ctx.configure_mesh().draw().unwrap();
