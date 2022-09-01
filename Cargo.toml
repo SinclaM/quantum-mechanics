@@ -19,5 +19,9 @@ path = "examples/harmonic_oscillator_shooting_method.rs"
 name = "harmonic_oscillator_matching_method"
 path = "examples/harmonic_oscillator_matching_method.rs"
 
+[[example]]
+name = "lennard_jones"
+path = "examples/lennard_jones.rs"
+
 [dev-dependencies]
 plotters = "0.3.3"

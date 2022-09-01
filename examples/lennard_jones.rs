@@ -1,4 +1,4 @@
-use quantum_mechanics::physics::harmonic_potential;
+use quantum_mechanics::physics::lennard_jones_potential;
 use quantum_mechanics::physics::matching::MatchingSolver;
 
 use std::fs;
@@ -8,19 +8,19 @@ use plotters::prelude::*;
 fn main() {
     // Solve the time-independent schrodinger equation using the shooting method for
     // odd parity wavefunctions.
-    const STEP_SIZE: f64 = 0.0001;
-    const INITIAL_ENERGY: f64 = 2.0;
+    const STEP_SIZE: f64 = 0.01;
+    const INITIAL_ENERGY: f64 = 0.0;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
     const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
-    const MIN_X: f64 = -5.0;
+    const MIN_X: f64 = 0.5;
     const MAX_X: f64 = 5.0;
-    const MATCH_X_VAL: f64 = MIN_X + (MAX_X - MIN_X) / 3.0;
+    const MATCH_X_VAL: f64 = 1.4;
     let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE) as usize;
     let mut solver = MatchingSolver::new(
         STEP_SIZE,
         INITIAL_ENERGY,
         INITIAL_ENERGY_STEP_SIZE,
-        harmonic_potential,
+        lennard_jones_potential,
         ENERGY_STEP_SIZE_CUTOFF,
         MIN_X,
         MAX_X,
@@ -31,7 +31,7 @@ fn main() {
 
     // Write the output to a data file
     fs::create_dir_all("img").expect("Failed to create image directory");
-    let root_area = BitMapBackend::new("img/harmonic_oscillator_matching_method.png", (1280, 720))
+    let root_area = BitMapBackend::new("img/lennard_jones.png", (1280, 720))
         .into_drawing_area();
     root_area.fill(&WHITE).unwrap();
 
@@ -39,10 +39,10 @@ fn main() {
         .set_label_area_size(LabelAreaPosition::Left, 40)
         .set_label_area_size(LabelAreaPosition::Bottom, 40)
         .caption(
-            "Harmonic oscillator wavefunction using the matching method",
+            "Wavefunction in a Lennard-Jones potential using the matching method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(solver.x_min..solver.x_max, -0.1_f64..0.1_f64)
+        .build_cartesian_2d(solver.x_min..solver.x_max, -0.0..2e13_f64)
         .unwrap();
 
     ctx.configure_mesh().draw().unwrap();

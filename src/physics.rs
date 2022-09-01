@@ -14,3 +14,9 @@ pub fn box_potential(x: f64) -> f64 {
 pub fn harmonic_potential(x: f64) -> f64 {
     0.5 * x * x
 }
+
+pub fn lennard_jones_potential(x: f64) -> f64 {
+    let epsilon = 10.0;
+    let sigma = 1.0;
+    4.0 * epsilon * ((sigma / x).powf(12.0) - (sigma / x).powf(6.0))
+}
