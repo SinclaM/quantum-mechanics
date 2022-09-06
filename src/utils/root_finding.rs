@@ -1,5 +1,5 @@
 pub fn find_root(
-    f: fn(f64) -> f64,
+    f: impl Fn(f64) -> f64,
     range: std::ops::RangeInclusive<f64>,
     tolerance: f64,
     max_loops: usize,
