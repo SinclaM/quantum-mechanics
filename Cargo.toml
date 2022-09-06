@@ -24,4 +24,8 @@ name = "lennard_jones"
 path = "examples/lennard_jones.rs"
 
 [dev-dependencies]
+cargo-prefetch = "0.1.0"
 plotters = "0.3.3"
+
+[dependencies]
+ndarray = "0.15.6"

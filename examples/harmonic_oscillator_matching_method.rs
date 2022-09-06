@@ -8,14 +8,14 @@ use plotters::prelude::*;
 fn main() {
     // Solve the time-independent schrodinger equation using the shooting method for
     // odd parity wavefunctions.
-    const STEP_SIZE: f64 = 0.0001;
-    const INITIAL_ENERGY: f64 = 2.0;
+    const STEP_SIZE: f64 = 0.01;
+    const INITIAL_ENERGY: f64 = 7.0;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
     const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
     const MIN_X: f64 = -5.0;
     const MAX_X: f64 = 5.0;
-    const MATCH_X_VAL: f64 = MIN_X + (MAX_X - MIN_X) / 3.0;
-    let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE) as usize;
+    const MATCH_X_VAL: f64 = 0.5;
+    let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE).round() as usize;
     let mut solver = MatchingSolver::new(
         STEP_SIZE,
         INITIAL_ENERGY,
@@ -25,8 +25,7 @@ fn main() {
         MIN_X,
         MAX_X,
         match_idx,
-    )
-    .unwrap();
+    );
     solver.solve();
 
     // Write the output to a data file

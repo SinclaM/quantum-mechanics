@@ -1,7 +1,6 @@
 //! Matching method for solving the time-independent Schrodinger equation
 //! in one dimension.
 
-use crate::utils::inward_vec::{InwardVec, InwardVecError};
 use crate::utils::integration::trapezoidal;
 use std::io::Write;
 
@@ -15,7 +14,8 @@ pub struct MatchingSolver {
     pub potential: fn(f64) -> f64,
     pub energy_step_size_cutoff: f64,
     is_left_slope_larger: bool,
-    pub wavefunction: InwardVec<f64>,
+    pub left_wavefunction: Vec<f64>,
+    pub right_wavefunction: Vec<f64>,
     match_idx: usize,
     pub x_min: f64,
     pub x_max: f64,
@@ -32,10 +32,10 @@ impl MatchingSolver {
         x_min: f64,
         x_max: f64,
         match_idx: usize,
-    ) -> Result<MatchingSolver, InwardVecError> {
-        let steps = ((x_max - x_min) / step_size) as usize;
+    ) -> MatchingSolver {
+        let steps = ((x_max - x_min) / step_size).round() as usize + 1;
 
-        Ok(MatchingSolver {
+        MatchingSolver {
             steps,
             step_size,
             energy,
@@ -43,42 +43,42 @@ impl MatchingSolver {
             potential,
             energy_step_size_cutoff,
             is_left_slope_larger: true,
-            wavefunction: InwardVec::<f64>::new(steps, match_idx)?,
+            left_wavefunction: Vec::<f64>::with_capacity(match_idx + 1),
+            right_wavefunction: Vec::<f64>::with_capacity(steps - match_idx),
             match_idx,
             x_min,
             x_max,
-        })
+        }
     }
 
     /// Applies the finite difference approximation to find value of wavefunction
     /// one position toward the matching point from the left.
-    fn step_from_left(&mut self) -> Result<(), InwardVecError> {
-        let last_left_idx = self.wavefunction.left - 1;
-        self.wavefunction.push_from_left(
-            2.0 * self.wavefunction.data[last_left_idx]
-                - self.wavefunction.data[last_left_idx - 1]
+    fn step_left(&mut self) {
+        let last_index = self.left_wavefunction.len() - 1;
+        self.left_wavefunction.push(
+            2.0 * self.left_wavefunction[last_index]
+                - self.left_wavefunction[last_index - 1]
                 - 2.0
                     * (self.energy
-                        - (self.potential)(self.x_min + (last_left_idx as f64) * self.step_size))
+                        - (self.potential)(self.x_min + (last_index as f64) * self.step_size))
                     * (self.step_size * self.step_size)
-                    * self.wavefunction.data[last_left_idx],
-        )?;
-        Ok(())
+                    * self.left_wavefunction[last_index],
+        );
     }
 
     /// Applies the finite difference approximation to find value of wavefunction
     /// one position toward the matching point from the right.
-    fn step_from_right(&mut self) -> Result<(), InwardVecError> {
-        let last_right_index = self.wavefunction.right + 1;
-        self.wavefunction.push_from_right(
+    fn step_right(&mut self) {
+        let last_index = self.right_wavefunction.len() - 1;
+        self.right_wavefunction.push(
             2.0 * (self.step_size
                 * self.step_size
-                * ((self.potential)(self.x_min + (last_right_index as f64) * self.step_size) - self.energy)
+                * ((self.potential)(self.x_max - (last_index as f64 + 1.0) * self.step_size)
+                    - self.energy)
                 + 1.0)
-                * self.wavefunction.data[last_right_index]
-                - self.wavefunction.data[last_right_index + 1],
-        )?;
-        Ok(())
+                * self.right_wavefunction[last_index]
+                - self.right_wavefunction[last_index - 1],
+        );
     }
 
     /// Approximates the wavefunction for the current energy. Stops when it has
@@ -86,53 +86,33 @@ impl MatchingSolver {
     /// diverging.
     fn compute_wavefunction(&mut self) {
         self.reset_wavefunction();
-
-        while self.step_from_left().is_ok() {
-            continue;
+        for _ in 1..=(self.match_idx - 1) {
+            self.step_left();
         }
 
-        while self.step_from_right().is_ok() {
-            continue;
+        for _ in 1..=(self.steps - self.match_idx - 2) {
+            self.step_right();
         }
 
         // Ensure continuity at match_idx
-        let last_right_index = self.wavefunction.right + 1;
-        let right_at_match = 2.0
-            * (self.step_size
-                * self.step_size
-                * ((self.potential)(self.x_min + (last_right_index as f64) * self.step_size)
-                    - self.energy)
-                + 1.0)
-            * self.wavefunction.data[last_right_index]
-            - self.wavefunction.data[last_right_index + 1];
-
-        let scale_factor = self.wavefunction.data[self.wavefunction.left - 1] / right_at_match;
-        self.wavefunction
-            .data
+        let scale_factor =
+            self.left_wavefunction.last().unwrap() / self.right_wavefunction.last().unwrap();
+        self.right_wavefunction
             .iter_mut()
-            .skip(self.match_idx + 1)
             .for_each(|val| *val *= scale_factor);
     }
 
     /// Resets the wavefunction vector. The values at the first two positions are
     /// set to 1.0, which is appopriate for non-normalized even parity wavefunctions.
     fn reset_wavefunction(&mut self) {
-        self.wavefunction
-            .data
-            .iter_mut()
-            .for_each(|val| *val = Default::default());
-        self.wavefunction.left = 0;
-        self.wavefunction.right = self.wavefunction.data.len() - 1;
+        self.left_wavefunction.clear();
+        self.right_wavefunction.clear();
 
-        self.wavefunction.push_from_left(0.0).unwrap();
-        self.wavefunction
-            .push_from_left(0.0001 * self.step_size)
-            .unwrap();
+        self.left_wavefunction.push(0.0);
+        self.left_wavefunction.push(0.001 * self.step_size);
 
-        self.wavefunction.push_from_right(0.0).unwrap();
-        self.wavefunction
-            .push_from_right(0.0001 * self.step_size)
-            .unwrap();
+        self.right_wavefunction.push(0.0);
+        self.right_wavefunction.push(0.001 * self.step_size);
     }
 
     /// Popuplates the wavefunction vector with a solution to the Schrodinger equation
@@ -147,27 +127,17 @@ impl MatchingSolver {
                 break;
             }
 
-            let left_slope = self.wavefunction.data[self.wavefunction.left - 1]
-                - self.wavefunction.data[self.wavefunction.left - 2];
+            let left_rise = self.left_wavefunction.last().unwrap()
+                - self.left_wavefunction[self.left_wavefunction.len() - 2];
 
-            let last_right_index = self.wavefunction.right + 1;
-            let right_at_match = 2.0
-                * (self.step_size
-                    * self.step_size
-                    * ((self.potential)(self.x_min + (last_right_index as f64) * self.step_size)
-                        - self.energy)
-                    + 1.0)
-                * self.wavefunction.data[last_right_index]
-                - self.wavefunction.data[last_right_index + 1];
+            let right_rise = -(self.right_wavefunction.last().unwrap()
+                - self.right_wavefunction[self.right_wavefunction.len() - 2]);
 
-            let right_slope =
-                -(right_at_match - self.wavefunction.data[self.wavefunction.right + 1]);
-
-            if self.is_left_slope_larger != (left_slope >= right_slope) {
+            if self.is_left_slope_larger != (left_rise >= right_rise) {
                 self.energy_step_size = -self.energy_step_size / 2.0;
             }
 
-            self.is_left_slope_larger = left_slope >= right_slope;
+            self.is_left_slope_larger = left_rise >= right_rise;
 
             self.energy += self.energy_step_size;
         }
@@ -190,8 +160,17 @@ impl MatchingSolver {
     /// Returns a vector of (x, ψ) points for the wavefunction.
     pub fn wavefunction_points(&self) -> Vec<(f64, f64)> {
         let mut pairs: Vec<(f64, f64)> = Vec::with_capacity(self.steps);
-        for (i, psi_val) in self.wavefunction.data.iter().enumerate() {
+        for (i, psi_val) in self.left_wavefunction.iter().enumerate() {
             pairs.push((self.x_min + (i as f64) * self.step_size, *psi_val));
+        }
+
+        for (i, psi_val) in self.right_wavefunction.iter().rev().skip(1).enumerate() {
+            pairs.push((
+                self.x_min
+                    + (self.match_idx as f64) * self.step_size
+                    + (i as f64 + 1.0) * self.step_size,
+                *psi_val,
+            ));
         }
 
         pairs
@@ -201,6 +180,12 @@ impl MatchingSolver {
         let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
         f = f.iter().map(|val| val * val).collect();
         let integral = trapezoidal(&f, &self.step_size);
-        self.wavefunction.data.iter_mut().for_each(|val| *val = *val * (1.0 / integral).sqrt());
+        self.left_wavefunction
+            .iter_mut()
+            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
+
+        self.right_wavefunction
+            .iter_mut()
+            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
     }
 }
