@@ -8,12 +8,13 @@ use plotters::prelude::*;
 fn main() {
     // Solve the time-independent schrodinger equation using the matching method.
     const STEP_SIZE: f64 = 0.01;
-    const INITIAL_ENERGY: f64 = 7.0;
+    const INITIAL_ENERGY: f64 = 1.45;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
     const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
     const MIN_X: f64 = -5.0;
     const MAX_X: f64 = 5.0;
-    const MATCH_X_VAL: f64 = 0.5;
+    const MATCH_X_VAL: f64 = -1.25;
+    const USING_NUMEROV: bool = true;
     let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE).round() as usize;
     let mut solver = MatchingSolver::new(
         STEP_SIZE,
@@ -24,6 +25,7 @@ fn main() {
         MIN_X,
         MAX_X,
         match_idx,
+        USING_NUMEROV,
     );
     solver.solve();
 
