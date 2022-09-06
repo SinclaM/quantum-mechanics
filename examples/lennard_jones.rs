@@ -6,8 +6,7 @@ use std::fs;
 use plotters::prelude::*;
 
 fn main() {
-    // Solve the time-independent schrodinger equation using the shooting method for
-    // odd parity wavefunctions.
+    // Solve the time-independent schrodinger equation using the matching method.
     const STEP_SIZE: f64 = 0.001;
     const INITIAL_ENERGY: f64 = 0.0;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
@@ -29,7 +28,7 @@ fn main() {
     );
     solver.solve();
 
-    // Write the output to a data file
+    // Plot the data
     fs::create_dir_all("img").expect("Failed to create image directory");
     let root_area = BitMapBackend::new("img/lennard_jones.png", (1280, 720))
         .into_drawing_area();

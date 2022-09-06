@@ -11,7 +11,7 @@ fn main() {
     let mut solver = ShootingSolver::default(10000, 0.01, 0.0, harmonic_potential, Parity::Odd);
     solver.solve();
 
-    // Write the output to a data file
+    // Plot the data
     fs::create_dir_all("img").expect("Failed to create image directory");
     let root_area = BitMapBackend::new("img/harmonic_oscillator_shooting_method.png", (1280, 720))
         .into_drawing_area();

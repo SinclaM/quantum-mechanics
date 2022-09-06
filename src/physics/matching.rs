@@ -22,7 +22,7 @@ pub struct MatchingSolver {
 }
 
 impl MatchingSolver {
-    /// Returns a new solver for even parity wavefunctions.
+    /// Creates a new matching solver.
     pub fn new(
         step_size: f64,
         energy: f64,
@@ -51,7 +51,7 @@ impl MatchingSolver {
         }
     }
 
-    /// Applies the finite difference approximation to find value of wavefunction
+    /// Applies the finite difference approximation to find the value of wavefunction
     /// one position toward the matching point from the left.
     fn step_left(&mut self) {
         let last_index = self.left_wavefunction.len() - 1;
@@ -66,7 +66,7 @@ impl MatchingSolver {
         );
     }
 
-    /// Applies the finite difference approximation to find value of wavefunction
+    /// Applies the finite difference approximation to find the value of wavefunction
     /// one position toward the matching point from the right.
     fn step_right(&mut self) {
         let last_index = self.right_wavefunction.len() - 1;
@@ -102,8 +102,7 @@ impl MatchingSolver {
             .for_each(|val| *val *= scale_factor);
     }
 
-    /// Resets the wavefunction vector. The values at the first two positions are
-    /// set to 1.0, which is appopriate for non-normalized even parity wavefunctions.
+    /// Resets the wavefunction vectors. 
     fn reset_wavefunction(&mut self) {
         self.left_wavefunction.clear();
         self.right_wavefunction.clear();
@@ -176,6 +175,7 @@ impl MatchingSolver {
         pairs
     }
 
+    /// Normalizes the wavefunction so that ∫|ψ|^2 dx = 1.
     fn normalize(&mut self) {
         let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
         f = f.iter().map(|val| val * val).collect();

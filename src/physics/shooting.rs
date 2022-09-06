@@ -21,7 +21,7 @@ pub struct ShootingSolver {
 }
 
 impl ShootingSolver {
-    /// Returns a new solver for even parity wavefunctions.
+    /// Returns a new solver that uses the shooting method.
     pub fn new(
         steps: usize,
         step_size: f64,
@@ -48,8 +48,7 @@ impl ShootingSolver {
         }
     }
 
-    /// Returns a new solver for even parity wavefunctions, using default options
-    /// for some fields.
+    /// Provides a default solver.
     pub fn default(
         steps: usize,
         step_size: f64,
@@ -105,8 +104,7 @@ impl ShootingSolver {
         }
     }
 
-    /// Resets the wavefunction vector. The values at the first two positions are
-    /// set to 1.0, which is appopriate for non-normalized even parity wavefunctions.
+    /// Resets the wavefunction vector.
     fn reset_wavefunction(&mut self) {
         self.wavefunction.clear();
         match self.parity {

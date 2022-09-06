@@ -15,7 +15,7 @@ fn main() {
         ShootingSolver::default(10000, L * 1.15 / 10000.0, 0.0, box_potential, Parity::Odd);
     odd_solver.solve();
 
-    // Write the output to a data file
+    // Plot the data
     fs::create_dir_all("img").expect("Failed to create image directory");
 
     let root_area = BitMapBackend::new("img/square_well_shooting_method.png", (1280, 720))
