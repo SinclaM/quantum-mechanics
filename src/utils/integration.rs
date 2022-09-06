@@ -8,9 +8,8 @@ pub fn trapezoidal(f: &[f64], delta_x: &f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::RangeInclusive;
     use crate::utils::integration::trapezoidal;
-    fn gen_range(range: RangeInclusive<f64>, step: f64) -> Vec<f64> {
+    fn gen_range(range: std::ops::RangeInclusive<f64>, step: f64) -> Vec<f64> {
         let mut x = *range.start();
         let mut ret = Vec::<f64>::new();
         while x <= *range.end() {
@@ -23,8 +22,10 @@ mod tests {
     #[test]
     fn parabola() {
         let step = 0.01;
-        let f: Vec<f64> = gen_range(0.0..=1.0, step).iter_mut().map(|x| *x * *x).collect();
+        let f: Vec<f64> = gen_range(0.0..=1.0, step)
+            .iter_mut()
+            .map(|x| *x * *x)
+            .collect();
         assert!((0.31..0.35).contains(&trapezoidal(&f, &step)));
     }
-
 }

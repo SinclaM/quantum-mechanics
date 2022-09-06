@@ -1,2 +1,2 @@
-pub mod inward_vec;
 pub mod integration;
+pub mod root_finding;
