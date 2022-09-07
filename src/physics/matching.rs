@@ -64,38 +64,40 @@ impl MatchingSolver {
         self.x_max - (i as f64) * self.step_size
     }
 
+    /// Computes a term needed for the Numerov method.
+    fn k_sqr(&self, x: f64) -> f64 {
+        2.0 * (self.energy - (self.potential)(x))
+    }
+
     /// Applies the finite difference approximation to find the value of wavefunction
     /// one position toward the matching point from the left.
     fn step_left(&mut self) {
         let last_index = self.left_wavefunction.len() - 1;
-        let mut next: f64;
+        let next: f64;
         if self.using_numerov {
-            next =
-                2.0 * self.numerov_factor(
-                    self.x_from_left_idx(last_index),
-                    self.left_wavefunction[last_index],
-                ) - self.numerov_factor(
-                    self.x_from_left_idx(last_index - 1),
-                    self.left_wavefunction[last_index - 1],
-                ) - 2.0
-                    * (self.energy - (self.potential)(self.x_from_left_idx(last_index)))
-                    * (self.step_size * self.step_size)
-                    * self.numerov_factor(
-                        self.x_from_left_idx(last_index),
-                        self.left_wavefunction[last_index],
-                    );
-            // Need to recover ψ from Y.
-            next /= 1.0
-                - (1.0 / 6.0)
-                    * (self.step_size * self.step_size)
-                    * ((self.potential)(self.x_from_left_idx(last_index + 1)) - self.energy);
+            next = (2.0
+                * (1.0
+                    - (5.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_left_idx(last_index)))
+                * self.left_wavefunction[last_index]
+                - (1.0
+                    + (1.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_left_idx(last_index - 1)))
+                    * self.left_wavefunction[last_index - 1])
+                / (1.0
+                    + (1.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_left_idx(last_index + 1)));
         } else {
-            next = 2.0 * self.left_wavefunction[last_index]
-                - self.left_wavefunction[last_index - 1]
-                - 2.0
-                    * (self.energy - (self.potential)(self.x_from_left_idx(last_index)))
-                    * (self.step_size * self.step_size)
-                    * self.left_wavefunction[last_index];
+            next = 2.0
+                * (self.step_size
+                    * self.step_size
+                    * ((self.potential)(self.x_from_left_idx(last_index)) - self.energy)
+                    + 1.0)
+                * self.left_wavefunction[last_index]
+                - self.left_wavefunction[last_index - 1];
         }
 
         self.left_wavefunction.push(next);
@@ -105,26 +107,23 @@ impl MatchingSolver {
     /// one position toward the matching point from the right.
     fn step_right(&mut self) {
         let last_index = self.right_wavefunction.len() - 1;
-        let mut next: f64;
+        let next: f64;
         if self.using_numerov {
-            next = 2.0
-                * (self.step_size
-                    * self.step_size
-                    * ((self.potential)(self.x_from_right_idx(last_index)) - self.energy)
-                    + 1.0)
-                * self.numerov_factor(
-                    self.x_from_right_idx(last_index),
-                    self.right_wavefunction[last_index],
-                )
-                - self.numerov_factor(
-                    self.x_from_right_idx(last_index - 1),
-                    self.right_wavefunction[last_index - 1],
-                );
-            // Need to recover ψ from Y.
-            next /= 1.0
-                - (1.0 / 6.0)
-                    * (self.step_size * self.step_size)
-                    * ((self.potential)(self.x_from_right_idx(last_index + 1)) - self.energy);
+            next = (2.0
+                * (1.0
+                    - (5.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_right_idx(last_index)))
+                * self.right_wavefunction[last_index]
+                - (1.0
+                    + (1.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_right_idx(last_index - 1)))
+                    * self.right_wavefunction[last_index - 1])
+                / (1.0
+                    + (1.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_right_idx(last_index + 1)));
         } else {
             next = 2.0
                 * (self.step_size
@@ -135,14 +134,6 @@ impl MatchingSolver {
                 - self.right_wavefunction[last_index - 1];
         }
         self.right_wavefunction.push(next);
-    }
-
-    /// Computes the numerov factor, Y.
-    fn numerov_factor(&self, x: f64, psi: f64) -> f64 {
-        (1.0 - (1.0 / 6.0)
-            * (self.step_size * self.step_size)
-            * ((self.potential)(x) - self.energy))
-            * psi
     }
 
     /// Approximates the wavefunction for the current energy. Stops when it has
