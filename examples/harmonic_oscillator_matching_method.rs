@@ -1,5 +1,6 @@
 use quantum_mechanics::physics::harmonic_potential;
 use quantum_mechanics::physics::matching::MatchingSolver;
+use quantum_mechanics::utils::gen_range;
 
 use std::fs;
 
@@ -7,7 +8,7 @@ use plotters::prelude::*;
 
 fn main() {
     // Solve the time-independent schrodinger equation using the matching method.
-    const STEP_SIZE: f64 = 0.01;
+    const STEP_SIZE: f64 = 0.1;
     const INITIAL_ENERGY: f64 = 1.45;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
     const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
@@ -72,4 +73,13 @@ fn main() {
         .border_style(&BLACK)
         .draw()
         .unwrap();
+
+  ctx.draw_series(
+    LineSeries::new(gen_range(-10.0_f64..=10.0, 0.01).iter().map(|x| (*x, first_excited_state(*x))), &BLACK)
+  ).unwrap();
 }
+
+fn first_excited_state(x: f64) -> f64 {
+    - (1.0 / std::f64::consts::PI).powf(0.25) * 2.0_f64.sqrt() * x * (- 0.5 * x * x).exp()
+}
+

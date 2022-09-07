@@ -61,7 +61,7 @@ impl MatchingSolver {
 
     /// Computes the x value associated with an index into the right wavefunction.
     fn x_from_right_idx(&self, i: usize) -> f64 {
-        self.x_max - (i as f64 + 1.0) * self.step_size
+        self.x_max - (i as f64) * self.step_size
     }
 
     /// Applies the finite difference approximation to find the value of wavefunction
@@ -224,16 +224,11 @@ impl MatchingSolver {
     pub fn wavefunction_points(&self) -> Vec<(f64, f64)> {
         let mut pairs: Vec<(f64, f64)> = Vec::with_capacity(self.steps);
         for (i, psi_val) in self.left_wavefunction.iter().enumerate() {
-            pairs.push((self.x_min + (i as f64) * self.step_size, *psi_val));
+            pairs.push((self.x_from_left_idx(i), *psi_val));
         }
 
-        for (i, psi_val) in self.right_wavefunction.iter().rev().skip(1).enumerate() {
-            pairs.push((
-                self.x_min
-                    + (self.match_idx as f64) * self.step_size
-                    + (i as f64 + 1.0) * self.step_size,
-                *psi_val,
-            ));
+        for (i, psi_val) in self.right_wavefunction.iter().enumerate().rev().skip(1) {
+            pairs.push((self.x_from_right_idx(i), *psi_val));
         }
 
         pairs
