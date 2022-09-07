@@ -19,7 +19,7 @@ pub struct MatchingSolver {
     match_idx: usize,
     pub x_min: f64,
     pub x_max: f64,
-    using_numerov: bool,
+    pub using_numerov: bool,
 }
 
 impl MatchingSolver {
