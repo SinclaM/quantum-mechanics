@@ -70,25 +70,20 @@ impl MatchingSolver {
 
     /// Applies the finite difference approximation to find the value of wavefunction
     /// one position toward the matching point from either the left or right.
-    fn next(&self, side: &Side) -> f64 {
+    fn next(&self, side: &Side, last_index: usize, psi_last: f64, psi_second_to_last: f64) -> f64 {
         let next: f64;
-        let wavefunction = match side {
-            Side::Left => &self.left_wavefunction,
-            Side::Right => &self.right_wavefunction,
-        };
-        let last_index = wavefunction.len() - 1;
         if self.using_numerov {
             next = (2.0
                 * (1.0
                     - (5.0 / 12.0)
                         * self.step_size.powf(2.0)
                         * self.k_sqr(self.x_from_index(last_index, &side)))
-                * wavefunction[last_index]
+                * psi_last
                 - (1.0
                     + (1.0 / 12.0)
                         * self.step_size.powf(2.0)
                         * self.k_sqr(self.x_from_index(last_index - 1, &side)))
-                    * wavefunction[last_index - 1])
+                    * psi_second_to_last)
                 / (1.0
                     + (1.0 / 12.0)
                         * self.step_size.powf(2.0)
@@ -99,8 +94,8 @@ impl MatchingSolver {
                     * self.step_size
                     * ((self.potential)(self.x_from_index(last_index, &side)) - self.energy)
                     + 1.0)
-                * wavefunction[last_index]
-                - wavefunction[last_index - 1];
+                * psi_last
+                - psi_second_to_last;
         }
         next
     }
@@ -108,8 +103,24 @@ impl MatchingSolver {
     /// Updates the corresponding wavefunction according to the finite difference approximation
     fn step(&mut self, side: &Side) {
         match side {
-            Side::Left => self.left_wavefunction.push(self.next(side)),
-            Side::Right => self.right_wavefunction.push(self.next(side)),
+            Side::Left => {
+                let last_index = self.left_wavefunction.len() - 1;
+                self.left_wavefunction.push(self.next(
+                    side,
+                    last_index,
+                    self.left_wavefunction[last_index],
+                    self.left_wavefunction[last_index - 1],
+                ))
+            }
+            Side::Right => {
+                let last_index = self.right_wavefunction.len() - 1;
+                self.right_wavefunction.push(self.next(
+                    side,
+                    last_index,
+                    self.right_wavefunction[last_index],
+                    self.right_wavefunction[last_index - 1],
+                ))
+            }
         }
     }
 
@@ -158,17 +169,66 @@ impl MatchingSolver {
                 break;
             }
 
-            let left_rise = self.left_wavefunction.last().unwrap()
-                - self.left_wavefunction[self.left_wavefunction.len() - 2];
+            let left_slope: f64;
+            let right_slope: f64;
 
-            let right_rise = -(self.right_wavefunction.last().unwrap()
-                - self.right_wavefunction[self.right_wavefunction.len() - 2]);
+            if self.using_numerov {
+                let left_last_index = self.left_wavefunction.len() - 1;
+                let psi_left_one_next = self.next(
+                    &Side::Left,
+                    left_last_index,
+                    self.left_wavefunction[left_last_index],
+                    self.left_wavefunction[left_last_index - 1],
+                );
+                let psi_left_two_next = self.next(
+                    &Side::Left,
+                    left_last_index + 1,
+                    psi_left_one_next,
+                    self.left_wavefunction[left_last_index],
+                );
 
-            if self.is_left_slope_larger != (left_rise >= right_rise) {
+                let psi_left_one_prev = self.left_wavefunction[left_last_index - 1];
+                let psi_left_two_prev = self.left_wavefunction[left_last_index - 2];
+
+                left_slope = (-psi_left_two_next + 8.0 * psi_left_one_next
+                    - 8.0 * psi_left_one_prev
+                    + psi_left_two_prev)
+                    / (12.0 * self.step_size);
+
+                let right_last_index = self.right_wavefunction.len() - 1;
+                let psi_right_one_next = self.next(
+                    &Side::Right,
+                    right_last_index,
+                    self.right_wavefunction[right_last_index],
+                    self.right_wavefunction[right_last_index - 1],
+                );
+                let psi_right_two_next = self.next(
+                    &Side::Right,
+                    right_last_index + 1,
+                    psi_right_one_next,
+                    self.right_wavefunction[right_last_index],
+                );
+
+                let psi_right_one_prev = self.right_wavefunction[right_last_index - 1];
+                let psi_right_two_prev = self.right_wavefunction[right_last_index - 2];
+
+                right_slope = (-psi_right_two_prev + 8.0 * psi_right_one_prev
+                    - 8.0 * psi_right_one_next
+                    + psi_right_two_next)
+                    / (12.0 * self.step_size);
+            } else {
+                left_slope = self.left_wavefunction.last().unwrap()
+                    - self.left_wavefunction[self.left_wavefunction.len() - 2];
+
+                right_slope = -(self.right_wavefunction.last().unwrap()
+                    - self.right_wavefunction[self.right_wavefunction.len() - 2]);
+            }
+
+            if self.is_left_slope_larger != (left_slope >= right_slope) {
                 self.energy_step_size = -self.energy_step_size / 2.0;
             }
 
-            self.is_left_slope_larger = left_rise >= right_rise;
+            self.is_left_slope_larger = left_slope >= right_slope;
 
             self.energy += self.energy_step_size;
         }

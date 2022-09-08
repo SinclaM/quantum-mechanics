@@ -89,7 +89,7 @@ fn main() {
     let mut lower_chart = ChartBuilder::on(&lower)
         .set_label_area_size(LabelAreaPosition::Left, 40)
         .set_label_area_size(LabelAreaPosition::Bottom, 40)
-        .caption("Relative error", ("sans-serif", 40))
+        .caption("Relative error (%)", ("sans-serif", 40))
         .build_cartesian_2d(solver.x_min..solver.x_max, -10.0..10.0)
         .unwrap();
 
@@ -100,7 +100,7 @@ fn main() {
             solver.wavefunction_points().iter().map(|point| {
                 (
                     point.0,
-                    relative_error(point.1, first_excited_state(point.0)),
+                    relative_error(point.1, first_excited_state(point.0)) * 100.0,
                 )
             }),
             &BLACK,
@@ -109,7 +109,17 @@ fn main() {
         .label(format!("Using Numerov: {}", solver.using_numerov))
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
 
-    solver.using_numerov = false;
+    let mut solver = MatchingSolver::new(
+        STEP_SIZE,
+        INITIAL_ENERGY,
+        INITIAL_ENERGY_STEP_SIZE,
+        harmonic_potential,
+        ENERGY_STEP_SIZE_CUTOFF,
+        MIN_X,
+        MAX_X,
+        match_idx,
+        false,
+    );
     solver.solve();
 
     lower_chart
@@ -117,7 +127,7 @@ fn main() {
             solver.wavefunction_points().iter().map(|point| {
                 (
                     point.0,
-                    relative_error(point.1, first_excited_state(point.0)),
+                    relative_error(point.1, first_excited_state(point.0)) * 100.0,
                 )
             }),
             &GREEN,

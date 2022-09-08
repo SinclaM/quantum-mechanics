@@ -13,10 +13,10 @@ pub fn gen_range(range: std::ops::RangeInclusive<f64>, step: f64) -> Vec<f64> {
 }
 
 pub fn relative_error(observed: f64, theoretical: f64) -> f64 {
-    let mut relative_error =(observed - theoretical) / theoretical * 100.0;
+    let mut relative_error = (observed - theoretical) / theoretical;
 
-    if relative_error.abs() > 1e7 {
-        relative_error = 1e7 * relative_error.signum();
+    if relative_error.abs() > 1e4 {
+        relative_error = 1e4 * relative_error.signum();
     }
 
     relative_error
