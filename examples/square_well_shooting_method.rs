@@ -1,5 +1,5 @@
-use quantum_mechanics::physics::shooting::{Parity, ShootingSolver};
-use quantum_mechanics::physics::{box_potential, L};
+use sim_quantum::physics::shooting::{Parity, ShootingSolver};
+use sim_quantum::physics::{box_potential, L};
 
 use std::fs;
 

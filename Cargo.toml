@@ -1,5 +1,5 @@
 [package]
-name = "quantum-mechanics"
+name = "sim-quantum"
 version = "0.1.0"
 edition = "2021"
 

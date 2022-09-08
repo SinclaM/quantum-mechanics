@@ -1,6 +1,6 @@
-use quantum_mechanics::physics::harmonic_potential;
-use quantum_mechanics::physics::matching::MatchingSolver;
-use quantum_mechanics::utils::{gen_range, relative_error};
+use sim_quantum::physics::harmonic_potential;
+use sim_quantum::physics::matching::MatchingSolver;
+use sim_quantum::utils::{gen_range, relative_error};
 
 use std::fs;
 

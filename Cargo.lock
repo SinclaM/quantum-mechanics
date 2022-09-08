@@ -1273,15 +1273,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "quantum-mechanics"
-version = "0.1.0"
-dependencies = [
- "cargo-prefetch",
- "ndarray",
- "plotters",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1632,6 +1623,15 @@ dependencies = [
  "itoa 0.4.8",
  "serde",
  "url 1.7.2",
+]
+
+[[package]]
+name = "sim-quantum"
+version = "0.1.0"
+dependencies = [
+ "cargo-prefetch",
+ "ndarray",
+ "plotters",
 ]
 
 [[package]]

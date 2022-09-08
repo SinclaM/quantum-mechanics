@@ -1,5 +1,5 @@
-use quantum_mechanics::physics::lennard_jones_potential;
-use quantum_mechanics::physics::matching::MatchingSolver;
+use sim_quantum::physics::lennard_jones_potential;
+use sim_quantum::physics::matching::MatchingSolver;
 
 use std::fs;
 

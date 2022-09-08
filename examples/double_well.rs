@@ -1,5 +1,5 @@
-use quantum_mechanics::physics::double_well_potential;
-use quantum_mechanics::physics::matching::MatchingSolver;
+use sim_quantum::physics::double_well_potential;
+use sim_quantum::physics::matching::MatchingSolver;
 
 use std::fs;
 

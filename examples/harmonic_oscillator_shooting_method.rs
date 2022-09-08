@@ -1,5 +1,5 @@
-use quantum_mechanics::physics::harmonic_potential;
-use quantum_mechanics::physics::shooting::{Parity, ShootingSolver};
+use sim_quantum::physics::harmonic_potential;
+use sim_quantum::physics::shooting::{Parity, ShootingSolver};
 
 use std::fs;
 
