@@ -11,7 +11,7 @@ fn main() {
     const STEP_SIZE: f64 = 0.1;
     const INITIAL_ENERGY: f64 = 1.45;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
-    const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
+    const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.00001;
     const MIN_X: f64 = -5.0;
     const MAX_X: f64 = 5.0;
     const MATCH_X_VAL: f64 = -1.0;
@@ -66,7 +66,7 @@ fn main() {
             )
         }))
         .unwrap()
-        .label(format!("E = {:.3}", solver.energy))
+        .label(format!("E = {:.5}", solver.energy))
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     upper_chart
