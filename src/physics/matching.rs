@@ -54,10 +54,12 @@ impl MatchingSolver {
         }
     }
 
+    /// Returns the x value associated with an index into either the right or left
+    /// wavefunction vector.
     fn x_from_index(&self, i: usize, side: &Side) -> f64 {
         match side {
-            Side::Left  => self.x_min + (i as f64) * self.step_size,
-            Side::Right => self.x_max - (i as f64) * self.step_size
+            Side::Left => self.x_min + (i as f64) * self.step_size,
+            Side::Right => self.x_max - (i as f64) * self.step_size,
         }
     }
 
@@ -68,69 +70,47 @@ impl MatchingSolver {
 
     /// Applies the finite difference approximation to find the value of wavefunction
     /// one position toward the matching point from either the left or right.
-    fn step(&mut self, side: &Side) {
+    fn next(&self, side: &Side) -> f64 {
         let next: f64;
-        match side {
-            Side::Left => {
-                let last_index = self.left_wavefunction.len() - 1;
-                if self.using_numerov {
-                    next = (2.0
-                        * (1.0
-                            - (5.0 / 12.0)
-                                * self.step_size.powf(2.0)
-                                * self.k_sqr(self.x_from_index(last_index, &side)))
-                        * self.left_wavefunction[last_index]
-                        - (1.0
-                            + (1.0 / 12.0)
-                                * self.step_size.powf(2.0)
-                                * self.k_sqr(self.x_from_index(last_index - 1, &side)))
-                            * self.left_wavefunction[last_index - 1])
-                        / (1.0
-                            + (1.0 / 12.0)
-                                * self.step_size.powf(2.0)
-                                * self.k_sqr(self.x_from_index(last_index + 1, &side)));
-                } else {
-                    next = 2.0
-                        * (self.step_size
-                            * self.step_size
-                            * ((self.potential)(self.x_from_index(last_index, &side)) - self.energy)
-                            + 1.0)
-                        * self.left_wavefunction[last_index]
-                        - self.left_wavefunction[last_index - 1];
-                }
-                self.left_wavefunction.push(next);
-            },
-            Side::Right => {
-                let last_index = self.right_wavefunction.len() - 1;
-                if self.using_numerov {
-                    next = (2.0
-                        * (1.0
-                            - (5.0 / 12.0)
-                                * self.step_size.powf(2.0)
-                                * self.k_sqr(self.x_from_index(last_index, &side)))
-                        * self.right_wavefunction[last_index]
-                        - (1.0
-                            + (1.0 / 12.0)
-                                * self.step_size.powf(2.0)
-                                * self.k_sqr(self.x_from_index(last_index - 1, &side)))
-                            * self.right_wavefunction[last_index - 1])
-                        / (1.0
-                            + (1.0 / 12.0)
-                                * self.step_size.powf(2.0)
-                                * self.k_sqr(self.x_from_index(last_index + 1, &side)));
-                } else {
-                    next = 2.0
-                        * (self.step_size
-                            * self.step_size
-                            * ((self.potential)(self.x_from_index(last_index, &side)) - self.energy)
-                            + 1.0)
-                        * self.right_wavefunction[last_index]
-                        - self.right_wavefunction[last_index - 1];
-                }
-                self.right_wavefunction.push(next);
-            }
+        let wavefunction = match side {
+            Side::Left => &self.left_wavefunction,
+            Side::Right => &self.right_wavefunction,
+        };
+        let last_index = wavefunction.len() - 1;
+        if self.using_numerov {
+            next = (2.0
+                * (1.0
+                    - (5.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_index(last_index, &side)))
+                * wavefunction[last_index]
+                - (1.0
+                    + (1.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_index(last_index - 1, &side)))
+                    * wavefunction[last_index - 1])
+                / (1.0
+                    + (1.0 / 12.0)
+                        * self.step_size.powf(2.0)
+                        * self.k_sqr(self.x_from_index(last_index + 1, &side)));
+        } else {
+            next = 2.0
+                * (self.step_size
+                    * self.step_size
+                    * ((self.potential)(self.x_from_index(last_index, &side)) - self.energy)
+                    + 1.0)
+                * wavefunction[last_index]
+                - wavefunction[last_index - 1];
         }
+        next
+    }
 
+    /// Updates the corresponding wavefunction according to the finite difference approximation
+    fn step(&mut self, side: &Side) {
+        match side {
+            Side::Left => self.left_wavefunction.push(self.next(side)),
+            Side::Right => self.right_wavefunction.push(self.next(side)),
+        }
     }
 
     /// Approximates the wavefunction for the current energy. Stops when it has
@@ -239,5 +219,5 @@ impl MatchingSolver {
 
 enum Side {
     Left,
-    Right
+    Right,
 }
