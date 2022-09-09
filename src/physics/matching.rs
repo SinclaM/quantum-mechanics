@@ -13,7 +13,7 @@ pub struct MatchingSolver {
     pub energy_step_size: f64,
     pub potential: fn(f64) -> f64,
     pub energy_step_size_cutoff: f64,
-    is_left_slope_larger: bool,
+    is_left_slope_larger: Option<bool>,
     pub left_wavefunction: Vec<f64>,
     pub right_wavefunction: Vec<f64>,
     match_idx: usize,
@@ -44,7 +44,7 @@ impl MatchingSolver {
             energy_step_size,
             potential,
             energy_step_size_cutoff,
-            is_left_slope_larger: true,
+            is_left_slope_larger: None,
             left_wavefunction: Vec::<f64>::with_capacity(match_idx + 1),
             right_wavefunction: Vec::<f64>::with_capacity(steps - match_idx),
             match_idx,
@@ -224,11 +224,11 @@ impl MatchingSolver {
                     - self.right_wavefunction[self.right_wavefunction.len() - 2]);
             }
 
-            if self.is_left_slope_larger != (left_slope >= right_slope) {
+            if self.is_left_slope_larger == Some(left_slope < right_slope) {
                 self.energy_step_size = -self.energy_step_size / 2.0;
             }
 
-            self.is_left_slope_larger = left_slope >= right_slope;
+            self.is_left_slope_larger = Some(left_slope >= right_slope);
 
             self.energy += self.energy_step_size;
         }

@@ -8,7 +8,7 @@ use plotters::prelude::*;
 fn main() {
     // Solve the time-independent schrodinger equation using the matching method.
     const STEP_SIZE: f64 = 5e-4;
-    const INITIAL_ENERGY: f64 = 25.0;
+    const INITIAL_ENERGY: f64 = 21.0;
     const INITIAL_ENERGY_STEP_SIZE: f64 = 1.0;
     const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
     const MIN_X: f64 = -1.3;
