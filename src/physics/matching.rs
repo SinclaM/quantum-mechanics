@@ -20,6 +20,7 @@ pub struct MatchingSolver {
     pub x_min: f64,
     pub x_max: f64,
     pub using_numerov: bool,
+    pub guarding_scale_factor: bool,
 }
 
 impl MatchingSolver {
@@ -34,6 +35,7 @@ impl MatchingSolver {
         x_max: f64,
         match_idx: usize,
         using_numerov: bool,
+        guarding_scale_factor: bool,
     ) -> MatchingSolver {
         let steps = ((x_max - x_min) / step_size).round() as usize + 1;
 
@@ -51,6 +53,7 @@ impl MatchingSolver {
             x_min,
             x_max,
             using_numerov,
+            guarding_scale_factor,
         }
     }
 
@@ -127,7 +130,7 @@ impl MatchingSolver {
     /// Approximates the wavefunction for the current energy. Stops when it has
     /// computed the requested number of steps, or if the wavefunction begins
     /// diverging.
-    fn compute_wavefunction(&mut self) {
+    fn compute_wavefunction(&mut self) -> Result<(), ()> {
         self.reset_wavefunction();
         for _ in 1..=(self.match_idx - 1) {
             self.step(&Side::Left);
@@ -140,9 +143,15 @@ impl MatchingSolver {
         // Ensure continuity at match_idx
         let scale_factor =
             self.left_wavefunction.last().unwrap() / self.right_wavefunction.last().unwrap();
-        self.right_wavefunction
-            .iter_mut()
-            .for_each(|val| *val *= scale_factor);
+
+        if self.guarding_scale_factor && (scale_factor.abs() > 100.0 || scale_factor.abs().recip() > 100.0) {
+            Err(())
+        } else {
+            self.right_wavefunction
+                .iter_mut()
+                .for_each(|val| *val *= scale_factor);
+            Ok(())
+        }
     }
 
     /// Resets the wavefunction vectors.
@@ -151,10 +160,10 @@ impl MatchingSolver {
         self.right_wavefunction.clear();
 
         self.left_wavefunction.push(0.0);
-        self.left_wavefunction.push(0.001 * self.step_size);
+        self.left_wavefunction.push(1e-18 * self.step_size);
 
         self.right_wavefunction.push(0.0);
-        self.right_wavefunction.push(0.001 * self.step_size);
+        self.right_wavefunction.push(1e-18 * self.step_size);
     }
 
     /// Returns the slopes of both component wavefunctions (left and right) at the
@@ -223,7 +232,8 @@ impl MatchingSolver {
     /// sufficiently small.
     pub fn solve(&mut self) {
         loop {
-            self.compute_wavefunction();
+            let result = self.compute_wavefunction();
+
             if self.energy_step_size.abs() <= self.energy_step_size_cutoff {
                 self.normalize();
                 break;
@@ -231,7 +241,7 @@ impl MatchingSolver {
 
             let (left_slope, right_slope) = self.slopes();
 
-            if self.is_left_slope_larger == Some(left_slope < right_slope) {
+            if result.is_ok() && self.is_left_slope_larger == Some(left_slope < right_slope) {
                 self.energy_step_size = -self.energy_step_size / 2.0;
             }
 

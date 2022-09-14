@@ -15,6 +15,7 @@ fn main() {
     const MAX_X: f64 = 1.3;
     const MATCH_X_VAL: f64 = 0.3;
     const USING_NUMEROV: bool = true;
+    const GUARDING_SCALE_FACTOR: bool = true;
     let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE).round() as usize;
 
     let mut solver = MatchingSolver::new(
@@ -27,6 +28,7 @@ fn main() {
         MAX_X,
         match_idx,
         USING_NUMEROV,
+        GUARDING_SCALE_FACTOR,
     );
     solver.solve();
 
