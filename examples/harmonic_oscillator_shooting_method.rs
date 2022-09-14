@@ -27,7 +27,12 @@ fn main() {
         .build_cartesian_2d(-8.0..8.0, -1.5..1.5)
         .unwrap();
 
-    ctx.configure_mesh().draw().unwrap();
+    ctx.configure_mesh()
+        .x_desc("x")
+        .y_desc("ψ")
+        .axis_desc_style(("sans-serif", 20))
+        .draw()
+        .unwrap();
 
     ctx.draw_series(solver.wavefunction_points().iter().map(|point| {
         Circle::new(

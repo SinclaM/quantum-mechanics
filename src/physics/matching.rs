@@ -157,6 +157,66 @@ impl MatchingSolver {
         self.right_wavefunction.push(0.001 * self.step_size);
     }
 
+    /// Returns the slopes of both component wavefunctions (left and right) at the
+    /// matching point as a tuple, `(left_slope, right_slope)`.
+    pub fn slopes(&self) -> (f64, f64) {
+        let left_slope: f64;
+        let right_slope: f64;
+
+        if self.using_numerov {
+            let left_last_index = self.left_wavefunction.len() - 1;
+            let psi_left_one_next = self.next(
+                &Side::Left,
+                left_last_index,
+                self.left_wavefunction[left_last_index],
+                self.left_wavefunction[left_last_index - 1],
+            );
+            let psi_left_two_next = self.next(
+                &Side::Left,
+                left_last_index + 1,
+                psi_left_one_next,
+                self.left_wavefunction[left_last_index],
+            );
+
+            let psi_left_one_prev = self.left_wavefunction[left_last_index - 1];
+            let psi_left_two_prev = self.left_wavefunction[left_last_index - 2];
+
+            left_slope = (-psi_left_two_next + 8.0 * psi_left_one_next
+                - 8.0 * psi_left_one_prev
+                + psi_left_two_prev)
+                / (12.0 * self.step_size);
+
+            let right_last_index = self.right_wavefunction.len() - 1;
+            let psi_right_one_next = self.next(
+                &Side::Right,
+                right_last_index,
+                self.right_wavefunction[right_last_index],
+                self.right_wavefunction[right_last_index - 1],
+            );
+            let psi_right_two_next = self.next(
+                &Side::Right,
+                right_last_index + 1,
+                psi_right_one_next,
+                self.right_wavefunction[right_last_index],
+            );
+
+            let psi_right_one_prev = self.right_wavefunction[right_last_index - 1];
+            let psi_right_two_prev = self.right_wavefunction[right_last_index - 2];
+
+            right_slope = (-psi_right_two_prev + 8.0 * psi_right_one_prev
+                - 8.0 * psi_right_one_next
+                + psi_right_two_next)
+                / (12.0 * self.step_size);
+        } else {
+            left_slope = self.left_wavefunction.last().unwrap()
+                - self.left_wavefunction[self.left_wavefunction.len() - 2];
+
+            right_slope = -(self.right_wavefunction.last().unwrap()
+                - self.right_wavefunction[self.right_wavefunction.len() - 2]);
+        }
+        (left_slope, right_slope)
+    }
+
     /// Popuplates the wavefunction vector with a solution to the Schrodinger equation
     /// and also determines the corresponding energy. The process requires iterating
     /// over many candidate energies and stopping when the energy step size becomes
@@ -169,60 +229,7 @@ impl MatchingSolver {
                 break;
             }
 
-            let left_slope: f64;
-            let right_slope: f64;
-
-            if self.using_numerov {
-                let left_last_index = self.left_wavefunction.len() - 1;
-                let psi_left_one_next = self.next(
-                    &Side::Left,
-                    left_last_index,
-                    self.left_wavefunction[left_last_index],
-                    self.left_wavefunction[left_last_index - 1],
-                );
-                let psi_left_two_next = self.next(
-                    &Side::Left,
-                    left_last_index + 1,
-                    psi_left_one_next,
-                    self.left_wavefunction[left_last_index],
-                );
-
-                let psi_left_one_prev = self.left_wavefunction[left_last_index - 1];
-                let psi_left_two_prev = self.left_wavefunction[left_last_index - 2];
-
-                left_slope = (-psi_left_two_next + 8.0 * psi_left_one_next
-                    - 8.0 * psi_left_one_prev
-                    + psi_left_two_prev)
-                    / (12.0 * self.step_size);
-
-                let right_last_index = self.right_wavefunction.len() - 1;
-                let psi_right_one_next = self.next(
-                    &Side::Right,
-                    right_last_index,
-                    self.right_wavefunction[right_last_index],
-                    self.right_wavefunction[right_last_index - 1],
-                );
-                let psi_right_two_next = self.next(
-                    &Side::Right,
-                    right_last_index + 1,
-                    psi_right_one_next,
-                    self.right_wavefunction[right_last_index],
-                );
-
-                let psi_right_one_prev = self.right_wavefunction[right_last_index - 1];
-                let psi_right_two_prev = self.right_wavefunction[right_last_index - 2];
-
-                right_slope = (-psi_right_two_prev + 8.0 * psi_right_one_prev
-                    - 8.0 * psi_right_one_next
-                    + psi_right_two_next)
-                    / (12.0 * self.step_size);
-            } else {
-                left_slope = self.left_wavefunction.last().unwrap()
-                    - self.left_wavefunction[self.left_wavefunction.len() - 2];
-
-                right_slope = -(self.right_wavefunction.last().unwrap()
-                    - self.right_wavefunction[self.right_wavefunction.len() - 2]);
-            }
+            let (left_slope, right_slope) = self.slopes();
 
             if self.is_left_slope_larger == Some(left_slope < right_slope) {
                 self.energy_step_size = -self.energy_step_size / 2.0;
@@ -235,9 +242,20 @@ impl MatchingSolver {
     }
 
     /// Prints energy and wavefunction data to a text file. Useful for later analysis
-    /// with tools like gnuplot. The first line is the a `#` (gnuplot comment) followed
+    /// with tools like gnuplot. The first line is the a '#' (gnuplot comment) followed
     /// by the energy value (e.g "# 1.24345678"). The rest of the lines in the file
     /// are the x-value and then the wavefunction value (separated by a space).
+    /// # Example
+    /// ```txt
+    /// --output file--
+    ///     # 22.0927734375
+    ///     -1.3 0
+    ///     -1.25 0.00000000928011292465171
+    ///     -1.2 -0.00000009554014322853878
+    ///     -1.15 0.00000097431987580849
+    ///     -1.1 -0.000009935227934806336
+    ///       ︙             ︙
+    /// ```
     pub fn dump_to_file(&mut self, data_file: &mut std::fs::File) -> Result<(), std::io::Error> {
         writeln!(data_file, "# {}", self.energy)?;
 
@@ -277,6 +295,7 @@ impl MatchingSolver {
     }
 }
 
+/// Indicates the side of a component wavefunction in the matching method.
 enum Side {
     Left,
     Right,

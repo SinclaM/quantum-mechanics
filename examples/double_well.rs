@@ -32,8 +32,7 @@ fn main() {
 
     // Plot the data
     fs::create_dir_all("img").expect("Failed to create image directory");
-    let root_area = BitMapBackend::new("img/double_well.png", (1280, 720))
-        .into_drawing_area();
+    let root_area = BitMapBackend::new("img/double_well.png", (1280, 720)).into_drawing_area();
     root_area.fill(&WHITE).unwrap();
 
     let mut ctx = ChartBuilder::on(&root_area)
@@ -46,7 +45,12 @@ fn main() {
         .build_cartesian_2d(solver.x_min..solver.x_max, -2.0..2.0)
         .unwrap();
 
-    ctx.configure_mesh().draw().unwrap();
+    ctx.configure_mesh()
+        .x_desc("x")
+        .y_desc("ψ")
+        .axis_desc_style(("sans-serif", 20))
+        .draw()
+        .unwrap();
 
     ctx.draw_series(solver.wavefunction_points().iter().map(|point| {
         Circle::new(

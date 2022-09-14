@@ -46,7 +46,12 @@ fn main() {
         .build_cartesian_2d(solver.x_min..solver.x_max, -0.0..2.0)
         .unwrap();
 
-    ctx.configure_mesh().draw().unwrap();
+    ctx.configure_mesh()
+        .x_desc("x")
+        .y_desc("ψ")
+        .axis_desc_style(("sans-serif", 20))
+        .draw()
+        .unwrap();
 
     ctx.draw_series(solver.wavefunction_points().iter().map(|point| {
         Circle::new(

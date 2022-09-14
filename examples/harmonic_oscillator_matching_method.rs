@@ -15,7 +15,7 @@ fn main() {
     const MIN_X: f64 = -5.0;
     const MAX_X: f64 = 5.0;
     const MATCH_X_VAL: f64 = -1.0;
-    const USING_NUMEROV: bool = true;
+    let mut using_numerov: bool = true;
     let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE).round() as usize;
     let mut solver = MatchingSolver::new(
         STEP_SIZE,
@@ -26,7 +26,7 @@ fn main() {
         MIN_X,
         MAX_X,
         match_idx,
-        USING_NUMEROV,
+        using_numerov,
     );
     solver.solve();
 
@@ -47,7 +47,12 @@ fn main() {
         .build_cartesian_2d(solver.x_min..solver.x_max, -1.0..1.0)
         .unwrap();
 
-    upper_chart.configure_mesh().draw().unwrap();
+    upper_chart.configure_mesh()
+        .x_desc("x")
+        .y_desc("ψ")
+        .axis_desc_style(("sans-serif", 20))
+        .draw()
+        .unwrap();
 
     upper_chart
         .draw_series(solver.wavefunction_points().iter().map(|point| {
@@ -80,6 +85,7 @@ fn main() {
 
     upper_chart
         .configure_series_labels()
+        .position(SeriesLabelPosition::LowerRight)
         .label_font(("sans-serif", 20))
         .background_style(&WHITE.mix(0.8))
         .border_style(&BLACK)
@@ -93,7 +99,12 @@ fn main() {
         .build_cartesian_2d(solver.x_min..solver.x_max, -10.0..10.0)
         .unwrap();
 
-    lower_chart.configure_mesh().draw().unwrap();
+    lower_chart.configure_mesh()
+        .x_desc("x")
+        .y_desc("Relative error (%)")
+        .axis_desc_style(("sans-serif", 20))
+        .draw()
+        .unwrap();
 
     lower_chart
         .draw_series(LineSeries::new(
@@ -106,9 +117,10 @@ fn main() {
             &BLACK,
         ))
         .unwrap()
-        .label(format!("Using Numerov: {}", solver.using_numerov))
+        .label(if using_numerov { "Numerov method" } else { "Second order second difference method"})
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
 
+    using_numerov = false;
     let mut solver = MatchingSolver::new(
         STEP_SIZE,
         INITIAL_ENERGY,
@@ -118,7 +130,7 @@ fn main() {
         MIN_X,
         MAX_X,
         match_idx,
-        false,
+        using_numerov,
     );
     solver.solve();
 
@@ -133,11 +145,12 @@ fn main() {
             &GREEN,
         ))
         .unwrap()
-        .label(format!("Using Numerov: {}", solver.using_numerov))
+        .label(if using_numerov { "Numerov method" } else { "Second order second difference method"})
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
 
     lower_chart
         .configure_series_labels()
+        .position(SeriesLabelPosition::LowerRight)
         .label_font(("sans-serif", 20))
         .background_style(&WHITE.mix(0.8))
         .border_style(&BLACK)
