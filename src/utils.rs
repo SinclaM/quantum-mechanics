@@ -1,4 +1,5 @@
 pub mod integration;
+pub mod finite_difference;
 pub mod root_finding;
 
 

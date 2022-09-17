@@ -1632,6 +1632,7 @@ dependencies = [
  "cargo-prefetch",
  "ndarray",
  "plotters",
+ "rand",
 ]
 
 [[package]]
