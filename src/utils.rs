@@ -10,6 +10,7 @@ pub fn gen_range(range: std::ops::RangeInclusive<f64>, step: f64) -> Vec<f64> {
         ret.push(x);
         x += step;
     }
+    
     ret
 }
 

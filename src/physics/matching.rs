@@ -3,6 +3,7 @@
 
 use crate::utils::integration::trapezoidal;
 use std::io::Write;
+use crate::physics::variational::energy_of;
 
 /// A solver that looks for solutions using the matching method.
 
@@ -233,6 +234,9 @@ impl MatchingSolver {
     pub fn solve(&mut self) {
         loop {
             let result = self.compute_wavefunction();
+            let (_, f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
+            //let e = energy_of(&f, self.steps, self.step_size, self.potential, self.x_min);
+            //dbg!(self.energy, e);
 
             if self.energy_step_size.abs() <= self.energy_step_size_cutoff {
                 self.normalize();

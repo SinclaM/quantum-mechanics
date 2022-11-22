@@ -1,87 +1,160 @@
 use crate::utils::finite_difference;
 use crate::utils::finite_difference::SecondDerivateMethod;
 use crate::utils::integration;
+use crate::utils::relative_error;
+
+use rand::Rng;
 
 pub struct VariationalSolver {
     pub steps: usize,
     pub step_size: f64,
-    pub last_energy: Option<f64>,
+    pub energy: f64,
     pub potential: fn(f64) -> f64,
     pub x_min: f64,
     pub x_max: f64,
     pub wavefunction: Vec<f64>,
+    last_energy: Option<f64>,
 }
 
 impl VariationalSolver {
     pub fn new(step_size: f64, potential: fn(f64) -> f64, x_min: f64, x_max: f64) -> Self {
         let steps = ((x_max - x_min) / step_size).round() as usize + 1;
         let mut wavefunction = vec![(1.0 / (x_max - x_min)).sqrt(); steps];
-        for (i, psi) in wavefunction.iter_mut().enumerate() {
-            *psi = (i as f64).powf(2.0) * 4e-7;
+        for (i, val) in wavefunction.iter_mut().enumerate() {
+            let x = x_from_index(i, x_min, step_size);
+            if x < -1.0 || x > 1.0 {
+                *val = 0.0;
+            }
         }
-
+        //for (i, psi) in wavefunction.iter_mut().enumerate() {
+            //*psi = (i as f64).powf(2.0) * 4e-7;
+        //}
         VariationalSolver {
             steps,
             step_size,
-            last_energy: None,
+            energy: energy_of(&wavefunction, steps, step_size, potential, x_min),
             potential,
             x_min,
             x_max,
             wavefunction,
+            last_energy: None,
         }
     }
 
-    pub fn x_from_index(&self, i: usize) -> f64 {
-        self.x_min + (i as f64) * self.step_size
+    fn step(&mut self) {
+        let mut candidate: Vec<f64> = self.wavefunction.iter().cloned().collect();
+
+        let index = rand::thread_rng().gen_range(0, self.steps);
+
+        let max_delta = 0.01;
+        let psi_delta = rand::thread_rng().gen_range(-max_delta, max_delta);
+        candidate[index] += psi_delta;
+
+        let candidate_energy = energy_of(
+            &candidate,
+            self.steps,
+            self.step_size,
+            self.potential,
+            self.x_min,
+        );
+        if candidate_energy < self.energy {
+            self.last_energy = Some(self.energy);
+
+            //println!(
+                //"At x = {}: {} -> {}",
+                //x_from_index(index, self.x_min, self.step_size),
+                //self.wavefunction[index],
+                //candidate[index]
+            //);
+            self.energy = candidate_energy;
+            self.wavefunction = candidate;
+            println!("{}", self.energy);
+        }
     }
 
-    fn hamiltonian_on_wavefunction(&self) -> Vec<f64> {
-        let mut result = Vec::with_capacity(self.steps);
-
-        for i in 0..=(self.steps - 1) {
-            let method = if i == 0 {
-                SecondDerivateMethod::ForwardDifference
-            } else if i == self.steps - 1 {
-                SecondDerivateMethod::BackwardDifference
-            } else {
-                SecondDerivateMethod::CentralDifference
-            };
-            result.push(
-                -0.5 * finite_difference::second_derivative(
-                    &method,
-                    &self.wavefunction,
-                    i,
-                    self.step_size,
-                ),
-            );
+    pub fn solve(&mut self) {
+        for i in 1..=100000{
+            break;
+            if i % 10000 == 0 {println!("{i}, {}", self.energy)};
+            self.step();
         }
-        result
+        self.normalize();
+        //self.energy = energy_of(
+            //&self.wavefunction,
+            //self.steps,
+            //self.step_size,
+            //self.potential,
+            //self.x_min,
+        //);
     }
 
-    pub fn current_energy(&self) -> f64 {
-        let mut psi_hamil_psi = Vec::with_capacity(self.steps);
-        let mut psi_psi = Vec::with_capacity(self.steps);
-
-        for (psi, hamiltonian_on_psi) in self
-            .wavefunction
-            .iter()
-            .zip(self.hamiltonian_on_wavefunction().iter())
-        {
-            psi_hamil_psi.push(psi * hamiltonian_on_psi);
-            psi_psi.push(psi * psi);
-        }
-
-        integration::trapezoidal(&psi_hamil_psi, &self.step_size)
-            / integration::trapezoidal(&psi_psi, &self.step_size)
+    fn normalize(&mut self) {
+        let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
+        f = f.iter().map(|val| val * val).collect();
+        let integral = integration::trapezoidal(&f, &self.step_size);
+        self.wavefunction
+            .iter_mut()
+            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
     }
 
     pub fn wavefunction_points(&self) -> Vec<(f64, f64)> {
         let mut pairs: Vec<(f64, f64)> = Vec::with_capacity(self.steps);
 
         for (i, psi_val) in self.wavefunction.iter().enumerate() {
-            pairs.push((self.x_from_index(i), *psi_val));
+            pairs.push((x_from_index(i, self.x_min, self.step_size), *psi_val));
         }
 
         pairs
     }
+}
+
+fn x_from_index(i: usize, x_min: f64, step_size: f64) -> f64 {
+    x_min + (i as f64) * step_size
+}
+
+fn hamiltonian_on_wavefunction(
+    wavefunction: &[f64],
+    steps: usize,
+    step_size: f64,
+    potential: fn(f64) -> f64,
+    x_min: f64,
+) -> Vec<f64> {
+    let mut result = Vec::with_capacity(steps);
+
+    for i in 0..=(steps - 1) {
+        let method = if i == 0 {
+            SecondDerivateMethod::ForwardDifference
+        } else if i == steps - 1 {
+            SecondDerivateMethod::BackwardDifference
+        } else {
+            SecondDerivateMethod::CentralDifference
+        };
+        result.push(
+            -0.5 * finite_difference::second_derivative(&method, &wavefunction, i, step_size)
+                + potential(x_from_index(i, x_min, step_size)) * wavefunction[i],
+        );
+    }
+    result
+}
+
+pub fn energy_of(
+    wavefunction: &[f64],
+    steps: usize,
+    step_size: f64,
+    potential: fn(f64) -> f64,
+    x_min: f64,
+) -> f64 {
+    let mut psi_hamil_psi = Vec::with_capacity(steps);
+    let mut psi_psi = Vec::with_capacity(steps);
+
+    for (psi, hamiltonian_on_psi) in wavefunction
+        .iter()
+        .zip(hamiltonian_on_wavefunction(wavefunction, steps, step_size, potential, x_min).iter())
+    {
+        psi_hamil_psi.push(psi * hamiltonian_on_psi);
+        psi_psi.push(psi * psi);
+    }
+
+    integration::trapezoidal(&psi_hamil_psi, &step_size)
+        / integration::trapezoidal(&psi_psi, &step_size)
 }
