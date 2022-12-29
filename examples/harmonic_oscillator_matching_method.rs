@@ -1,35 +1,24 @@
-use sim_quantum::physics::harmonic_potential;
-use sim_quantum::physics::matching::MatchingSolver;
-use sim_quantum::utils::{gen_range, relative_error};
-
 use std::fs;
 
+use sim_quantum::prelude::*;
 use plotters::prelude::*;
 
 fn main() {
     // Solve the time-independent schrodinger equation using the matching method.
-    const STEP_SIZE: f64 = 0.1;
-    const INITIAL_ENERGY: f64 = 1.45;
-    const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
-    const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.00001;
-    const MIN_X: f64 = -5.0;
-    const MAX_X: f64 = 5.0;
-    const MATCH_X_VAL: f64 = -1.0;
-    const GUARDING_SCALE_FACTOR: bool = true;
-    let mut using_numerov: bool = true;
-    let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE).round() as usize;
-    let mut solver = MatchingSolver::new(
-        STEP_SIZE,
-        INITIAL_ENERGY,
-        INITIAL_ENERGY_STEP_SIZE,
-        harmonic_potential,
-        ENERGY_STEP_SIZE_CUTOFF,
-        MIN_X,
-        MAX_X,
-        match_idx,
-        using_numerov,
-        GUARDING_SCALE_FACTOR,
-    );
+    let mut config = MatchingConfig {
+        x_min: -5.0,
+        x_max: 5.0,
+        x_match: -1.0,
+        step_size: 0.1,
+        initial_energy: 1.45,
+        initial_energy_step_size: 0.1,
+        energy_step_size_cutoff: 0.00001,
+        potential: harmonic_potential,
+        using_numerov: true,
+        guarding_scale_factor: true
+    };
+
+    let mut solver = MatchingSolver::new(&config);
     solver.solve();
 
     // Plot the data
@@ -46,7 +35,7 @@ fn main() {
             "Harmonic oscillator wavefunction using the matching method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(solver.x_min..solver.x_max, -1.0..1.0)
+        .build_cartesian_2d(config.x_min..config.x_max, -1.0..1.0)
         .unwrap();
 
     upper_chart.configure_mesh()
@@ -62,7 +51,7 @@ fn main() {
                 *point,
                 2,
                 plotters::style::ShapeStyle {
-                    color: if point.0 <= MATCH_X_VAL {
+                    color: if point.0 <= config.x_match {
                         BLUE.mix(1.0)
                     } else {
                         RED.mix(1.0)
@@ -73,7 +62,7 @@ fn main() {
             )
         }))
         .unwrap()
-        .label(format!("E = {:.5}", solver.energy))
+        .label(format!("E = {:.5}", solver.energy()))
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     upper_chart
@@ -98,7 +87,7 @@ fn main() {
         .set_label_area_size(LabelAreaPosition::Left, 40)
         .set_label_area_size(LabelAreaPosition::Bottom, 40)
         .caption("Relative error (%)", ("sans-serif", 40))
-        .build_cartesian_2d(solver.x_min..solver.x_max, -10.0..10.0)
+        .build_cartesian_2d(config.x_min..config.x_max, -10.0..10.0)
         .unwrap();
 
     lower_chart.configure_mesh()
@@ -119,22 +108,11 @@ fn main() {
             &BLACK,
         ))
         .unwrap()
-        .label(if using_numerov { "Numerov method" } else { "Second order second difference method"})
+        .label(if config.using_numerov { "Numerov method" } else { "Second order second difference method"})
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
 
-    using_numerov = false;
-    let mut solver = MatchingSolver::new(
-        STEP_SIZE,
-        INITIAL_ENERGY,
-        INITIAL_ENERGY_STEP_SIZE,
-        harmonic_potential,
-        ENERGY_STEP_SIZE_CUTOFF,
-        MIN_X,
-        MAX_X,
-        match_idx,
-        using_numerov,
-        GUARDING_SCALE_FACTOR,
-    );
+    config.using_numerov = false;
+    let mut solver = MatchingSolver::new(&config);
     solver.solve();
 
     lower_chart
@@ -148,7 +126,7 @@ fn main() {
             &GREEN,
         ))
         .unwrap()
-        .label(if using_numerov { "Numerov method" } else { "Second order second difference method"})
+        .label(if config.using_numerov { "Numerov method" } else { "Second order second difference method"})
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
 
     lower_chart

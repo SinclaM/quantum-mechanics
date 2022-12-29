@@ -1,6 +1,4 @@
-pub mod shooting;
-pub mod matching;
-pub mod variational;
+pub mod solvers;
 
 pub const L: f64 = 0.5;
 

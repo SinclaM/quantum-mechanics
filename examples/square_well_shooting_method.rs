@@ -1,25 +1,36 @@
-use sim_quantum::physics::shooting::{Parity, ShootingSolver};
-use sim_quantum::physics::{box_potential, L};
-
 use std::fs;
 
 use plotters::prelude::*;
+use sim_quantum::physics::L;
+use sim_quantum::prelude::*;
 
 fn main() {
     // Solve the time-independent schrodinger equation using the shooting method.
-    let mut even_solver =
-        ShootingSolver::default(10000, L * 1.15 / 10000.0, 0.0, box_potential, Parity::Even);
+    let even_config = ShootingConfig {
+        x_max: 0.55,
+        step_size: L * 1.15 / 10000.0,
+        initial_energy: 0.0,
+        intitial_energy_step_size: 0.1,
+        wavefunction_cutoff: 100.0,
+        potential: box_potential,
+        energy_step_size_cutoff: 0.000001,
+        parity: Parity::Even,
+    };
+
+    let mut even_solver = ShootingSolver::new(&even_config);
     even_solver.solve();
 
-    let mut odd_solver =
-        ShootingSolver::default(10000, L * 1.15 / 10000.0, 0.0, box_potential, Parity::Odd);
+    let mut odd_config = even_config.clone();
+    odd_config.parity = Parity::Odd;
+
+    let mut odd_solver = ShootingSolver::new(&odd_config);
     odd_solver.solve();
 
     // Plot the data
     fs::create_dir_all("img").expect("Failed to create image directory");
 
-    let root_area = BitMapBackend::new("img/square_well_shooting_method.png", (1280, 720))
-        .into_drawing_area();
+    let root_area =
+        BitMapBackend::new("img/square_well_shooting_method.png", (1280, 720)).into_drawing_area();
     root_area.fill(&WHITE).unwrap();
 
     let mut ctx = ChartBuilder::on(&root_area)
@@ -51,7 +62,7 @@ fn main() {
         )
     }))
     .unwrap()
-    .label(format!("E = {:.3}", even_solver.energy))
+    .label(format!("E = {:.3}", even_solver.energy()))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     ctx.draw_series(odd_solver.wavefunction_points().iter().map(|point| {
@@ -66,7 +77,7 @@ fn main() {
         )
     }))
     .unwrap()
-    .label(format!("E = {:.3}", odd_solver.energy))
+    .label(format!("E = {:.3}", odd_solver.energy()))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
 
     ctx.configure_series_labels()

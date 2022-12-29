@@ -1,102 +1,79 @@
 //! Matching method for solving the time-independent Schrodinger equation
 //! in one dimension.
 
+use crate::physics::solvers::Solver;
 use crate::utils::integration::trapezoidal;
-use std::io::Write;
-use crate::physics::variational::energy_of;
 
-/// A solver that looks for solutions using the matching method.
-
-pub struct MatchingSolver {
-    pub steps: usize,
-    pub step_size: f64,
-    pub energy: f64,
-    pub energy_step_size: f64,
-    pub potential: fn(f64) -> f64,
-    pub energy_step_size_cutoff: f64,
-    is_left_slope_larger: Option<bool>,
-    pub left_wavefunction: Vec<f64>,
-    pub right_wavefunction: Vec<f64>,
-    match_idx: usize,
+#[derive(Clone)]
+pub struct MatchingConfig {
     pub x_min: f64,
     pub x_max: f64,
+    pub x_match: f64,
+    pub step_size: f64,
+    pub initial_energy: f64,
+    pub initial_energy_step_size: f64,
+    pub energy_step_size_cutoff: f64,
+    pub potential: fn(f64) -> f64,
     pub using_numerov: bool,
     pub guarding_scale_factor: bool,
 }
 
-impl MatchingSolver {
-    /// Creates a new matching solver.
-    pub fn new(
-        step_size: f64,
-        energy: f64,
-        energy_step_size: f64,
-        potential: fn(f64) -> f64,
-        energy_step_size_cutoff: f64,
-        x_min: f64,
-        x_max: f64,
-        match_idx: usize,
-        using_numerov: bool,
-        guarding_scale_factor: bool,
-    ) -> MatchingSolver {
-        let steps = ((x_max - x_min) / step_size).round() as usize + 1;
+/// A solver that looks for solutions using the matching method.
+pub struct MatchingSolver {
+    pub config: MatchingConfig,
+    steps: usize,
+    energy: f64,
+    energy_step_size: f64,
+    is_left_slope_larger: Option<bool>,
+    left_wavefunction: Vec<f64>,
+    right_wavefunction: Vec<f64>,
+}
 
-        MatchingSolver {
-            steps,
-            step_size,
-            energy,
-            energy_step_size,
-            potential,
-            energy_step_size_cutoff,
-            is_left_slope_larger: None,
-            left_wavefunction: Vec::<f64>::with_capacity(match_idx + 1),
-            right_wavefunction: Vec::<f64>::with_capacity(steps - match_idx),
-            match_idx,
-            x_min,
-            x_max,
-            using_numerov,
-            guarding_scale_factor,
-        }
+impl MatchingSolver {
+    fn match_idx(&self) -> usize {
+        ((self.config.x_match - self.config.x_min) / self.config.step_size).round() as usize
     }
 
     /// Returns the x value associated with an index into either the right or left
     /// wavefunction vector.
     fn x_from_index(&self, i: usize, side: &Side) -> f64 {
         match side {
-            Side::Left => self.x_min + (i as f64) * self.step_size,
-            Side::Right => self.x_max - (i as f64) * self.step_size,
+            Side::Left => self.config.x_min + (i as f64) * self.config.step_size,
+            Side::Right => self.config.x_max - (i as f64) * self.config.step_size,
         }
     }
 
     /// Computes a term needed for the Numerov method.
     fn k_sqr(&self, x: f64) -> f64 {
-        2.0 * (self.energy - (self.potential)(x))
+        2.0 * (self.energy - (self.config.potential)(x))
     }
 
     /// Applies the finite difference approximation to find the value of wavefunction
     /// one position toward the matching point from either the left or right.
     fn next(&self, side: &Side, last_index: usize, psi_last: f64, psi_second_to_last: f64) -> f64 {
         let next: f64;
-        if self.using_numerov {
+        if self.config.using_numerov {
             next = (2.0
                 * (1.0
                     - (5.0 / 12.0)
-                        * self.step_size.powf(2.0)
+                        * self.config.step_size.powf(2.0)
                         * self.k_sqr(self.x_from_index(last_index, &side)))
                 * psi_last
                 - (1.0
                     + (1.0 / 12.0)
-                        * self.step_size.powf(2.0)
+                        * self.config.step_size.powf(2.0)
                         * self.k_sqr(self.x_from_index(last_index - 1, &side)))
                     * psi_second_to_last)
                 / (1.0
                     + (1.0 / 12.0)
-                        * self.step_size.powf(2.0)
+                        * self.config.step_size.powf(2.0)
                         * self.k_sqr(self.x_from_index(last_index + 1, &side)));
         } else {
             next = 2.0
-                * (self.step_size
-                    * self.step_size
-                    * ((self.potential)(self.x_from_index(last_index, &side)) - self.energy)
+                * (self.config.step_size
+                    * self.config.step_size
+                    * ((self.config.potential)(self.x_from_index(last_index, &side))
+                        - self.energy)
                     + 1.0)
                 * psi_last
                 - psi_second_to_last;
@@ -133,11 +110,11 @@ impl MatchingSolver {
     /// diverging.
     fn compute_wavefunction(&mut self) -> Result<(), ()> {
         self.reset_wavefunction();
-        for _ in 1..=(self.match_idx - 1) {
+        for _ in 1..=(self.match_idx() - 1) {
             self.step(&Side::Left);
         }
 
-        for _ in 1..=(self.steps - self.match_idx - 2) {
+        for _ in 1..=(self.steps - self.match_idx() - 2) {
             self.step(&Side::Right);
         }
 
@@ -145,7 +122,9 @@ impl MatchingSolver {
         let scale_factor =
             self.left_wavefunction.last().unwrap() / self.right_wavefunction.last().unwrap();
 
-        if self.guarding_scale_factor && (scale_factor.abs() > 100.0 || scale_factor.abs().recip() > 100.0) {
+        if self.config.guarding_scale_factor
+            && (scale_factor.abs() > 100.0 || scale_factor.abs().recip() > 100.0)
+        {
             Err(())
         } else {
             self.right_wavefunction
@@ -161,10 +140,10 @@ impl MatchingSolver {
         self.right_wavefunction.clear();
 
         self.left_wavefunction.push(0.0);
-        self.left_wavefunction.push(1e-18 * self.step_size);
+        self.left_wavefunction.push(1e-18 * self.config.step_size);
 
         self.right_wavefunction.push(0.0);
-        self.right_wavefunction.push(1e-18 * self.step_size);
+        self.right_wavefunction.push(1e-18 * self.config.step_size);
     }
 
     /// Returns the slopes of both component wavefunctions (left and right) at the
@@ -173,7 +152,7 @@ impl MatchingSolver {
         let left_slope: f64;
         let right_slope: f64;
 
-        if self.using_numerov {
+        if self.config.using_numerov {
             let left_last_index = self.left_wavefunction.len() - 1;
             let psi_left_one_next = self.next(
                 &Side::Left,
@@ -191,10 +170,9 @@ impl MatchingSolver {
             let psi_left_one_prev = self.left_wavefunction[left_last_index - 1];
             let psi_left_two_prev = self.left_wavefunction[left_last_index - 2];
 
-            left_slope = (-psi_left_two_next + 8.0 * psi_left_one_next
-                - 8.0 * psi_left_one_prev
+            left_slope = (-psi_left_two_next + 8.0 * psi_left_one_next - 8.0 * psi_left_one_prev
                 + psi_left_two_prev)
-                / (12.0 * self.step_size);
+                / (12.0 * self.config.step_size);
 
             let right_last_index = self.right_wavefunction.len() - 1;
             let psi_right_one_next = self.next(
@@ -216,7 +194,7 @@ impl MatchingSolver {
             right_slope = (-psi_right_two_prev + 8.0 * psi_right_one_prev
                 - 8.0 * psi_right_one_next
                 + psi_right_two_next)
-                / (12.0 * self.step_size);
+                / (12.0 * self.config.step_size);
         } else {
             left_slope = self.left_wavefunction.last().unwrap()
                 - self.left_wavefunction[self.left_wavefunction.len() - 2];
@@ -227,18 +205,51 @@ impl MatchingSolver {
         (left_slope, right_slope)
     }
 
+    /// Normalizes the wavefunction so that ∫|ψ|²dx = 1.
+    fn normalize(&mut self) {
+        let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
+        f = f.iter().map(|val| val * val).collect();
+        let integral = trapezoidal(&f, &self.config.step_size);
+        self.left_wavefunction
+            .iter_mut()
+            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
+
+        self.right_wavefunction
+            .iter_mut()
+            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
+    }
+}
+
+impl Solver for MatchingSolver {
+    type CONFIG = MatchingConfig;
+
+    fn new(config: &Self::CONFIG) -> Self {
+        let steps = ((config.x_max - config.x_min) / config.step_size).round() as usize + 1;
+        let match_idx = ((config.x_match - config.x_min) / config.step_size).round() as usize;
+
+        MatchingSolver {
+            config: config.clone(),
+            steps,
+            energy: config.initial_energy,
+            energy_step_size: config.initial_energy_step_size,
+            is_left_slope_larger: None,
+            left_wavefunction: Vec::<f64>::with_capacity(match_idx + 1),
+            right_wavefunction: Vec::<f64>::with_capacity(steps - match_idx),
+        }
+    }
+
     /// Popuplates the wavefunction vector with a solution to the Schrodinger equation
     /// and also determines the corresponding energy. The process requires iterating
     /// over many candidate energies and stopping when the energy step size becomes
     /// sufficiently small.
-    pub fn solve(&mut self) {
+    fn solve(&mut self) {
         loop {
             let result = self.compute_wavefunction();
             let (_, f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
             //let e = energy_of(&f, self.steps, self.step_size, self.potential, self.x_min);
             //dbg!(self.energy, e);
 
-            if self.energy_step_size.abs() <= self.energy_step_size_cutoff {
+            if self.energy_step_size.abs() <= self.config.energy_step_size_cutoff {
                 self.normalize();
                 break;
             }
@@ -255,34 +266,17 @@ impl MatchingSolver {
         }
     }
 
-    /// Prints energy and wavefunction data to a text file. Useful for later analysis
-    /// with tools like gnuplot. The first line is the a '#' (gnuplot comment) followed
-    /// by the energy value (e.g "# 1.24345678"). The rest of the lines in the file
-    /// are the x-value and then the wavefunction value (separated by a space).
-    /// # Example
-    /// ```txt
-    /// --output file--
-    ///     # 22.0927734375
-    ///     -1.3 0
-    ///     -1.25 0.00000000928011292465171
-    ///     -1.2 -0.00000009554014322853878
-    ///     -1.15 0.00000097431987580849
-    ///     -1.1 -0.000009935227934806336
-    ///       ︙             ︙
-    /// ```
-    pub fn dump_to_file(&mut self, data_file: &mut std::fs::File) -> Result<(), std::io::Error> {
-        writeln!(data_file, "# {}", self.energy)?;
-
-        for (x, psi) in self.wavefunction_points().iter() {
-            writeln!(data_file, "{} {}", x, psi)?;
-        }
-
-        Ok(())
+    fn energy(&self) -> f64 {
+        self.energy
     }
 
-    /// Returns a vector of (x, ψ) points for the wavefunction.
-    pub fn wavefunction_points(&self) -> Vec<(f64, f64)> {
+    fn reset(&mut self) {
+        *self = Self::new(&self.config)
+    }
+
+    fn wavefunction_points(&self) -> Vec<(f64, f64)> {
         let mut pairs: Vec<(f64, f64)> = Vec::with_capacity(self.steps);
+
         for (i, psi_val) in self.left_wavefunction.iter().enumerate() {
             pairs.push((self.x_from_index(i, &Side::Left), *psi_val));
         }
@@ -292,20 +286,6 @@ impl MatchingSolver {
         }
 
         pairs
-    }
-
-    /// Normalizes the wavefunction so that ∫|ψ|²dx = 1.
-    fn normalize(&mut self) {
-        let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
-        f = f.iter().map(|val| val * val).collect();
-        let integral = trapezoidal(&f, &self.step_size);
-        self.left_wavefunction
-            .iter_mut()
-            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
-
-        self.right_wavefunction
-            .iter_mut()
-            .for_each(|val| *val = *val * (1.0 / integral).sqrt());
     }
 }
 

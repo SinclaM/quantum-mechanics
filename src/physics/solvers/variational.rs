@@ -1,46 +1,27 @@
+use crate::physics::solvers::Solver;
 use crate::utils::finite_difference;
 use crate::utils::finite_difference::SecondDerivateMethod;
 use crate::utils::integration;
-use crate::utils::relative_error;
 
 use rand::Rng;
 
-pub struct VariationalSolver {
-    pub steps: usize,
-    pub step_size: f64,
-    pub energy: f64,
-    pub potential: fn(f64) -> f64,
+#[derive(Clone)]
+pub struct VariationalConfig {
     pub x_min: f64,
     pub x_max: f64,
-    pub wavefunction: Vec<f64>,
+    pub step_size: f64,
+    pub potential: fn(f64) -> f64,
+}
+
+pub struct VariationalSolver {
+    pub config: VariationalConfig,
+    steps: usize,
+    energy: f64,
+    wavefunction: Vec<f64>,
     last_energy: Option<f64>,
 }
 
 impl VariationalSolver {
-    pub fn new(step_size: f64, potential: fn(f64) -> f64, x_min: f64, x_max: f64) -> Self {
-        let steps = ((x_max - x_min) / step_size).round() as usize + 1;
-        let mut wavefunction = vec![(1.0 / (x_max - x_min)).sqrt(); steps];
-        for (i, val) in wavefunction.iter_mut().enumerate() {
-            let x = x_from_index(i, x_min, step_size);
-            if x < -1.0 || x > 1.0 {
-                *val = 0.0;
-            }
-        }
-        //for (i, psi) in wavefunction.iter_mut().enumerate() {
-            //*psi = (i as f64).powf(2.0) * 4e-7;
-        //}
-        VariationalSolver {
-            steps,
-            step_size,
-            energy: energy_of(&wavefunction, steps, step_size, potential, x_min),
-            potential,
-            x_min,
-            x_max,
-            wavefunction,
-            last_energy: None,
-        }
-    }
-
     fn step(&mut self) {
         let mut candidate: Vec<f64> = self.wavefunction.iter().cloned().collect();
 
@@ -53,18 +34,18 @@ impl VariationalSolver {
         let candidate_energy = energy_of(
             &candidate,
             self.steps,
-            self.step_size,
-            self.potential,
-            self.x_min,
+            self.config.step_size,
+            self.config.potential,
+            self.config.x_min,
         );
         if candidate_energy < self.energy {
             self.last_energy = Some(self.energy);
 
             //println!(
-                //"At x = {}: {} -> {}",
-                //x_from_index(index, self.x_min, self.step_size),
-                //self.wavefunction[index],
-                //candidate[index]
+            //"At x = {}: {} -> {}",
+            //x_from_index(index, self.x_min, self.step_size),
+            //self.wavefunction[index],
+            //candidate[index]
             //);
             self.energy = candidate_energy;
             self.wavefunction = candidate;
@@ -72,26 +53,10 @@ impl VariationalSolver {
         }
     }
 
-    pub fn solve(&mut self) {
-        for i in 1..=100000{
-            break;
-            if i % 10000 == 0 {println!("{i}, {}", self.energy)};
-            self.step();
-        }
-        self.normalize();
-        //self.energy = energy_of(
-            //&self.wavefunction,
-            //self.steps,
-            //self.step_size,
-            //self.potential,
-            //self.x_min,
-        //);
-    }
-
     fn normalize(&mut self) {
         let (_, mut f): (Vec<_>, Vec<_>) = self.wavefunction_points().iter().cloned().unzip();
         f = f.iter().map(|val| val * val).collect();
-        let integral = integration::trapezoidal(&f, &self.step_size);
+        let integral = integration::trapezoidal(&f, &self.config.step_size);
         self.wavefunction
             .iter_mut()
             .for_each(|val| *val = *val * (1.0 / integral).sqrt());
@@ -101,7 +66,79 @@ impl VariationalSolver {
         let mut pairs: Vec<(f64, f64)> = Vec::with_capacity(self.steps);
 
         for (i, psi_val) in self.wavefunction.iter().enumerate() {
-            pairs.push((x_from_index(i, self.x_min, self.step_size), *psi_val));
+            pairs.push((x_from_index(i, self.config.x_min, self.config.step_size), *psi_val));
+        }
+
+        pairs
+    }
+}
+
+impl Solver for VariationalSolver {
+    type CONFIG = VariationalConfig;
+
+    fn new(config: &Self::CONFIG) -> Self {
+        let steps = ((config.x_max - config.x_min) / config.step_size).round() as usize + 1;
+        let mut wavefunction = vec![(1.0 / (config.x_max - config.x_min)).sqrt(); steps];
+        for (i, val) in wavefunction.iter_mut().enumerate() {
+            let x = x_from_index(i, config.x_min, config.step_size);
+            if x < -1.0 || x > 1.0 {
+                *val = 0.0;
+            }
+        }
+        //for (i, psi) in wavefunction.iter_mut().enumerate() {
+        //*psi = (i as f64).powf(2.0) * 4e-7;
+        //}
+        VariationalSolver {
+            config: config.clone(),
+            steps,
+            energy: energy_of(
+                &wavefunction,
+                steps,
+                config.step_size,
+                config.potential,
+                config.x_min,
+            ),
+            wavefunction,
+            last_energy: None,
+        }
+    }
+
+    fn solve(&mut self) {
+        for i in 1..=100000 {
+            if i % 10000 == 0 {
+                println!("{i}, {}", self.energy)
+            };
+            self.step();
+        }
+        self.normalize();
+        //self.energy = energy_of(
+        //&self.wavefunction,
+        //self.steps,
+        //self.step_size,
+        //self.potential,
+        //self.x_min,
+        //);
+    }
+
+    fn reset(&mut self) {
+        *self = Self::new(&self.config);
+    }
+
+    fn energy(&self) -> f64 {
+        energy_of(
+            &self.wavefunction,
+            self.steps,
+            self.config.step_size,
+            self.config.potential,
+            self.config.x_min,
+        )
+    }
+
+    fn wavefunction_points(&self) -> Vec<(f64, f64)> {
+        let mut pairs: Vec<(f64, f64)> = Vec::with_capacity(self.steps);
+
+        for (i, psi_val) in self.wavefunction.iter().enumerate() {
+            pairs.push((x_from_index(i, self.config.x_min, self.config.step_size), *psi_val));
         }
 
         pairs

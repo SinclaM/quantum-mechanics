@@ -1,51 +1,19 @@
-use sim_quantum::physics::lennard_jones_potential;
-use sim_quantum::physics::variational::VariationalSolver;
-use sim_quantum::physics::matching::MatchingSolver;
-
 use std::fs;
 
+use sim_quantum::prelude::*;
 use plotters::prelude::*;
 
 fn main() {
-    const _STEP_SIZE: f64 = 0.001;
-    const _INITIAL_ENERGY: f64 = -5.0;
-    const _INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
-    const _ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
-    const _MIN_X: f64 = 0.5;
-    const _MAX_X: f64 = 5.0;
-    const _MATCH_X_VAL: f64 = 1.4; 
-    const _USING_NUMEROV: bool = true;
-    const _GUARDING_SCALE_FACTOR: bool = false;
-    let match_idx = ((_MATCH_X_VAL - _MIN_X) / _STEP_SIZE).round() as usize;
-
-    let mut matcher = MatchingSolver::new(
-        _STEP_SIZE,
-        _INITIAL_ENERGY,
-        _INITIAL_ENERGY_STEP_SIZE,
-        lennard_jones_potential,
-        _ENERGY_STEP_SIZE_CUTOFF,
-        _MIN_X,
-        _MAX_X,
-        match_idx,
-        _USING_NUMEROV,
-        _GUARDING_SCALE_FACTOR,
-    );
-    matcher.solve();
-
     // Solve the time-independent schrodinger equation using the variational Monte-Carlo method.
-    const STEP_SIZE: f64 = 0.01;
-    const MIN_X: f64 = 0.5;
-    const MAX_X: f64 = 5.0;
+    let config = VariationalConfig {
+        x_min: 0.5,
+        x_max: 5.0,
+        step_size: 0.01,
+        potential: lennard_jones_potential
+    };
 
-    let mut solver = VariationalSolver::new(
-        STEP_SIZE,
-        lennard_jones_potential,
-        MIN_X,
-        MAX_X,
-    );
-    solver.wavefunction = matcher.wavefunction_points().iter().map(|(_, psi)| -*psi).collect();
-    dbg!(&solver.wavefunction);
-    //solver.solve();
+    let mut solver = VariationalSolver::new(&config);
+    solver.solve();
 
     // Plot the data
     fs::create_dir_all("img").expect("Failed to create image directory");
@@ -62,7 +30,7 @@ fn main() {
             "Wavefunction in a Lennard-Jones potential using the variational Monte-Carlo method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(solver.x_min..solver.x_max, psi_min..psi_max)
+        .build_cartesian_2d(solver.config.x_min..solver.config.x_max, psi_min..psi_max)
         .unwrap();
 
     ctx.configure_mesh()
@@ -84,7 +52,7 @@ fn main() {
         )
     }))
     .unwrap()
-    .label(format!("E = {:.3}", solver.energy))
+    .label(format!("E = {:.3}", solver.energy()))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     ctx.configure_series_labels()

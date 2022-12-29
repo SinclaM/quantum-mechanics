@@ -1,14 +1,23 @@
-use sim_quantum::physics::harmonic_potential;
-use sim_quantum::physics::shooting::{Parity, ShootingSolver};
-
 use std::fs;
 
+use sim_quantum::prelude::*;
 use plotters::prelude::*;
 
 fn main() {
     // Solve the time-independent schrodinger equation using the shooting method for
     // odd parity wavefunctions.
-    let mut solver = ShootingSolver::default(10000, 0.01, 0.0, harmonic_potential, Parity::Odd);
+    let config = ShootingConfig {
+        x_max: 7.0,
+        step_size: 0.01,
+        initial_energy: 0.0,
+        intitial_energy_step_size: 0.01,
+        energy_step_size_cutoff: 0.000001,
+        wavefunction_cutoff: 100.0,
+        potential: harmonic_potential,
+        parity: Parity::Odd,
+    };
+
+    let mut solver = ShootingSolver::new(&config);
     solver.solve();
 
     // Plot the data
@@ -46,7 +55,7 @@ fn main() {
         )
     }))
     .unwrap()
-    .label(format!("E = {:.3}", solver.energy))
+    .label(format!("E = {:.3}", solver.energy()))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     ctx.configure_series_labels()

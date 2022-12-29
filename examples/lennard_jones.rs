@@ -1,35 +1,26 @@
-use sim_quantum::physics::lennard_jones_potential;
-use sim_quantum::physics::matching::MatchingSolver;
-
 use std::fs;
 
+use sim_quantum::prelude::*;
 use plotters::prelude::*;
 
 fn main() {
     // Solve the time-independent schrodinger equation using the matching method.
-    const STEP_SIZE: f64 = 0.001;
-    const INITIAL_ENERGY: f64 = -5.0;
-    const INITIAL_ENERGY_STEP_SIZE: f64 = 0.1;
-    const ENERGY_STEP_SIZE_CUTOFF: f64 = 0.001;
-    const MIN_X: f64 = 0.5;
-    const MAX_X: f64 = 5.0;
-    const MATCH_X_VAL: f64 = 1.4;
-    const USING_NUMEROV: bool = true;
-    const GUARDING_SCALE_FACTOR: bool = false;
-    let match_idx = ((MATCH_X_VAL - MIN_X) / STEP_SIZE).round() as usize;
 
-    let mut solver = MatchingSolver::new(
-        STEP_SIZE,
-        INITIAL_ENERGY,
-        INITIAL_ENERGY_STEP_SIZE,
-        lennard_jones_potential,
-        ENERGY_STEP_SIZE_CUTOFF,
-        MIN_X,
-        MAX_X,
-        match_idx,
-        USING_NUMEROV,
-        GUARDING_SCALE_FACTOR,
-    );
+    let config = MatchingConfig {
+        x_min: 0.5,
+        x_max: 5.0,
+        x_match: 1.4,
+        step_size: 0.001,
+        initial_energy: -5.0,
+        initial_energy_step_size: 0.1,
+        energy_step_size_cutoff: 0.001,
+        potential: lennard_jones_potential,
+        using_numerov: true,
+        guarding_scale_factor: false
+    };
+
+
+    let mut solver = MatchingSolver::new(&config);
     solver.solve();
 
     // Plot the data
@@ -45,7 +36,7 @@ fn main() {
             "Wavefunction in a Lennard-Jones potential using the matching method",
             ("sans-serif", 40),
         )
-        .build_cartesian_2d(solver.x_min..solver.x_max, -0.0..2.0)
+        .build_cartesian_2d(config.x_min..config.x_max, -0.0..2.0)
         .unwrap();
 
     ctx.configure_mesh()
@@ -60,7 +51,7 @@ fn main() {
             *point,
             2,
             plotters::style::ShapeStyle {
-                color: if point.0 <= MATCH_X_VAL {
+                color: if point.0 <= config.x_match {
                     BLUE.mix(1.0)
                 } else {
                     RED.mix(1.0)
@@ -71,7 +62,7 @@ fn main() {
         )
     }))
     .unwrap()
-    .label(format!("E = {:.3}", solver.energy))
+    .label(format!("E = {:.3}", solver.energy()))
     .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
 
     ctx.configure_series_labels()
